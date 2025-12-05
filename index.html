@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FraudRob's AI Book Factory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&family=Roboto+Slab:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Playfair Display', 'serif'],
+              'roboto-slab': ['Roboto Slab', 'serif'],
+              'lato': ['Lato', 'sans-serif'],
+              'montserrat': ['Montserrat', 'sans-serif'],
+            },
+          },
+        },
+      };
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "jszip": "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js",
+    "epub-gen-es": "https://cdn.jsdelivr.net/npm/epub-gen-es@1.0.1/dist/epub-gen.js",
+    "fabric": "https://aistudiocdn.com/fabric@^6.9.0",
+    "express": "https://aistudiocdn.com/express@^5.1.0",
+    "http": "https://aistudiocdn.com/http@^0.0.1-security",
+    "ws": "https://aistudiocdn.com/ws@^8.18.3",
+    "playwright": "https://aistudiocdn.com/playwright@^1.56.1",
+    "fs/": "https://aistudiocdn.com/fs@^0.0.1-security/",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "os": "https://aistudiocdn.com/os@^0.1.2",
+    "buffer": "https://aistudiocdn.com/buffer@^6.0.3"
+  }
+}
+</script>
+</head>
+  <body class="bg-slate-900 text-slate-200 font-sans">
+    <div id="root"></div>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
