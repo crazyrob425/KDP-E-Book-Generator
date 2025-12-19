@@ -138,4 +138,21 @@ export type BotUpdate =
   | { type: 'progress'; progress: number }
   | { type: 'captcha'; imageUrl?: string }
   | { type: 'success' }
+  | { type: 'success' }
   | { type: 'error'; message: string };
+
+export interface ElectronAPI {
+  minimize: () => Promise<void>;
+  maximize: () => Promise<void>;
+  close: () => Promise<void>;
+  startAutomation: (payload: KdpAutomationPayload) => Promise<void>;
+  submitCaptcha: (solution: string) => Promise<void>;
+  stopAutomation: () => Promise<void>;
+  onAutomationUpdate: (callback: (update: BotUpdate) => void) => () => void;
+}
+
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI;
+  }
+}

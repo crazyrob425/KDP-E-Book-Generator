@@ -1,23 +1,33 @@
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import fs from 'fs'
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
-        host: '0.0.0.0',
-      },
-      plugins: [react()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [
+    react(),
+    {
+      name: 'electron-build-script',
+      writeBundle() {
+         // Simple inline build for main process if not using a separate config
+         require('esbuild').buildSync({
+            entryPoints: ['electron/main.ts', 'electron/preload.ts'],
+            bundle: true,
+            platform: 'node',
+            outdir: 'dist-electron',
+            external: ['electron', 'playwright', 'express', 'ws', 'buffer'], // Externalize backend deps
+            format: 'cjs',
+         });
       }
-    };
-});
+    }
+  ],
+  base: './', // Important for Electron file:// protocol
+  build: {
+      outDir: 'dist',
+      emptyOutDir: true,
+  },
+  server: {
+      port: 5173,
+      strictPort: true,
+  }
+})

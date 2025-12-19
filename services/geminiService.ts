@@ -1,7 +1,19 @@
+/// <reference types="vite/client" />
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { BookOutline, MarketReport, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AuthorProfile, Chapter } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+let aiInstance: GoogleGenAI | null = null;
+const getAi = () => {
+  if (!aiInstance) {
+    const key = import.meta.env.VITE_GOOGLE_API_KEY || process.env.API_KEY;
+    if (!key) {
+      throw new Error("API Key is missing. Please set VITE_GOOGLE_API_KEY in your .env file.");
+    }
+    aiInstance = new GoogleGenAI({ apiKey: key });
+  }
+  return aiInstance;
+};
 
 async function callWithRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
   for (let i = 0; i < retries; i++) {
@@ -16,7 +28,7 @@ async function callWithRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
 }
 
 export const getHotGenres = async (): Promise<GenreSuggestion[]> => {
-  const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
     model: 'gemini-2.5-flash',
     contents: 'Identify 5 currently trending book genres for self-publishing.',
     config: {
@@ -38,7 +50,7 @@ export const getHotGenres = async (): Promise<GenreSuggestion[]> => {
 };
 
 export const getTopicSuggestions = async (genre: string, reasoning: string): Promise<TopicSuggestion[]> => {
-  const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
     model: 'gemini-2.5-flash',
     contents: `Suggest 5 marketable book topics for the genre "${genre}". Context: ${reasoning}`,
     config: {
@@ -62,7 +74,7 @@ export const getTopicSuggestions = async (genre: string, reasoning: string): Pro
 export const generateMarketReport = async (topic: string, genre?: string): Promise<MarketReport> => {
   const prompt = `Generate a comprehensive market report for a book about "${topic}"${genre ? ` in the genre "${genre}"` : ''}. Include trend analysis, target audience (demographics, interests, painPoints), high-value keywords, suggested book types (type, reasoning), and competitor analysis (title, successFactor). Also simulate google trends data.`;
   
-  const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
     model: 'gemini-2.5-flash',
     contents: prompt,
     config: {
@@ -141,7 +153,7 @@ export const generateBookOutline = async (marketReport: MarketReport, bookType: 
     
     Return a JSON object with title, subtitle, and tableOfContents (chapter number, title, summary).`;
 
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
@@ -172,7 +184,7 @@ export const generateBookOutline = async (marketReport: MarketReport, bookType: 
 export const regenerateBookTitle = async (marketReport: MarketReport): Promise<{ title: string; subtitle: string }> => {
   const prompt = `Generate a catchy, bestselling title and subtitle for a book based on this market trend: ${marketReport.trendAnalysis}. Target Audience: ${marketReport.targetAudience.demographics}. Keywords: ${marketReport.keywords.join(', ')}.`;
   
-  const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
     model: 'gemini-2.5-flash',
     contents: prompt,
     config: {
@@ -197,7 +209,7 @@ export const generateChapterContent = async (chapterTitle: string, chapterSummar
   Format: Markdown.
   Do not include the chapter title at the start.`;
 
-  const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
     model: 'gemini-2.5-flash',
     contents: prompt
   }));
@@ -215,7 +227,7 @@ export const regenerateChapterWithGuidance = async (chapterTitle: string, chapte
     Target Length: ${lengthGuidance}
     Format: Markdown.`;
 
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt
     }));
@@ -227,7 +239,7 @@ export const generateImagePrompt = async (chapterExcerpt: string, style?: string
     Style: ${style || 'Cinematic, high quality, detailed'}.
     The prompt should be descriptive and suitable for an AI image generator.`;
 
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt
     }));
@@ -235,7 +247,7 @@ export const generateImagePrompt = async (chapterExcerpt: string, style?: string
 };
 
 async function generateImageWithFlash(prompt: string): Promise<string> {
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: { parts: [{ text: prompt }] }
     }));
@@ -264,7 +276,7 @@ export const generateExampleBookCover = async (): Promise<string> => {
 
 export const generateStockPhotoSuggestions = async (query: string): Promise<{prompt: string, url: string}[]> => {
     const prompt = `Create 3 distinct, detailed image prompts for stock photos based on the search query: "${query}". Return as JSON array of strings.`;
-     const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
@@ -294,7 +306,7 @@ export const humanizeChapterContent = async (content: string): Promise<string> =
     Text:
     ${content.substring(0, 5000)}... (truncated for length)`;
     
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt
     }));
@@ -309,7 +321,7 @@ export const generateKdpMarketingInfo = async (marketReport: MarketReport, outli
     
     Return JSON with shortDescription, longDescription (HTML format with b, i, ul, li tags), categories (array of 3 strings), keywords (array of 7 strings), and backCoverBlurb.`;
 
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
@@ -334,7 +346,7 @@ export const personalizeAuthorBio = async (currentBio: string, bookTopic: string
     Current Bio: ${currentBio}
     Keep it professional but engaging.`;
     
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt
     }));
@@ -345,7 +357,7 @@ export const generateQuickEnding = async (title: string, subtitle: string, lastC
      const prompt = `Write a satisfying conclusion/ending paragraph for the book "${title}: ${subtitle}".
      Context (Last Chapter): ${lastChapterContent.substring(0, 1000)}...`;
      
-     const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt
     }));
@@ -361,7 +373,7 @@ export const reimagineAuthorPersona = async (currentProfile: AuthorProfile, book
     
     Return JSON matching the AuthorProfile structure (excluding photos/marketing).`;
     
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
@@ -413,7 +425,7 @@ export const reimagineAuthorPersona = async (currentProfile: AuthorProfile, book
 export const generateBatchTitles = async (genre: string, count: number): Promise<{ title: string; subtitle: string }[]> => {
     const prompt = `Generate ${count} unique, marketable book title and subtitle pairs for the genre "${genre}". Return JSON array.`;
     
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
@@ -440,7 +452,7 @@ export const regenerateFullBookWithFeedback = async (currentOutline: BookOutline
      
      Return updated JSON with title, subtitle, and tableOfContents (empty content).`;
      
-     const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
          config: {
@@ -508,7 +520,7 @@ export const generateLiteraryCritique = async (chapterTitle: string, chapterCont
     Start with a brief "Scholar's Impression" summary, followed by bullet points of "Critical Analysis", and end with "Actionable Improvements".
     `;
 
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-3-pro-preview',
         contents: prompt,
     }));
@@ -541,7 +553,7 @@ export const applyLiteraryCritique = async (chapterTitle: string, currentContent
     4.  **Output ONLY the Content:** Return the full, rewritten chapter text in Markdown. No preambles.
     `;
 
-    const response = await callWithRetry<GenerateContentResponse>(() => ai.models.generateContent({
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-3-pro-preview',
         contents: prompt,
     }));

@@ -8,108 +8,99 @@ interface KdpAutomationBotProps extends KdpAutomationPayload {
   onClose: () => void;
 }
 
-// NOTE: In a real app, this would come from an environment variable.
-const WEBSOCKET_URL = 'ws://localhost:8080'; // For local testing
-// const WEBSOCKET_URL = 'wss://your-gcp-service-url.run.app'; // For production
+  // NOTE: Switched to Electron IPC
+  
+  const KdpAutomationBot: React.FC<KdpAutomationBotProps> = (props) => {
+      const [logs, setLogs] = useState<string[]>([]);
+      const [status, setStatus] = useState<BotStatus>('initializing');
+      const [progress, setProgress] = useState(0);
+      const [captchaInput, setCaptchaInput] = useState('');
+      const [captchaImageUrl, setCaptchaImageUrl] = useState<string | null>(null);
+      const logContainerRef = useRef<HTMLDivElement>(null);
+  
+      const addLog = (message: string) => {
+          setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
+      };
+  
+      useEffect(() => {
+          if (logContainerRef.current) {
+              logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+          }
+      }, [logs]);
+  
+      useEffect(() => {
+          addLog(`Initializing Electron IPC for KDP Automation...`);
+          
+          const startBot = async () => {
+              try {
+                  // We need to convert blobs to base64 to send them over IPC (same as WS)
+                  const epubBase64 = await blobToBase64(props.epubBlob);
+                  const payload = {
+                      ...props,
+                      epubBlob: epubBase64,
+                  };
+                  
+                  window.electronAPI.startAutomation(payload);
+              } catch (e) {
+                  addLog(`Error preparing payload: ${(e as Error).message}`);
+                  setStatus('error');
+              }
+          };
+          
+          startBot();
+  
+          // Listen for updates
+          const removeListener = window.electronAPI.onAutomationUpdate((update) => {
+               switch (update.type) {
+                  case 'log':
+                      addLog(update.message);
+                      break;
+                  case 'status':
+                      setStatus(update.status);
+                      break;
+                  case 'progress':
+                      setProgress(update.progress);
+                      break;
+                  case 'captcha':
+                      setStatus('captcha');
+                      setCaptchaImageUrl(update.imageUrl || null);
+                      addLog('[BACKEND] Paused. Awaiting manual CAPTCHA input.');
+                      break;
+                  case 'success':
+                      setStatus('success');
+                      addLog('[BACKEND] SUCCESS! Book has been submitted to Amazon KDP.');
+                      break;
+                  case 'error':
+                      setStatus('error');
+                      addLog(`[BACKEND] CRITICAL ERROR: ${update.message}`);
+                      break;
+              }
+          });
+  
+          return () => {
+              removeListener();
+              window.electronAPI.stopAutomation();
+              addLog('Automation stopped.');
+          };
+      }, [props]);
+      
+      const blobToBase64 = (blob: Blob): Promise<string> => {
+          return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+          });
+      }
 
-const KdpAutomationBot: React.FC<KdpAutomationBotProps> = (props) => {
-    const [logs, setLogs] = useState<string[]>([]);
-    const [status, setStatus] = useState<BotStatus>('initializing');
-    const [progress, setProgress] = useState(0);
-    const [captchaInput, setCaptchaInput] = useState('');
-    const [captchaImageUrl, setCaptchaImageUrl] = useState<string | null>(null);
-    const logContainerRef = useRef<HTMLDivElement>(null);
-    const ws = useRef<WebSocket | null>(null);
-
-    const addLog = (message: string) => {
-        setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
-    };
-
-    useEffect(() => {
-        if (logContainerRef.current) {
-            logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-        }
-    }, [logs]);
-
-    useEffect(() => {
-        addLog(`Attempting to connect to backend at ${WEBSOCKET_URL}...`);
-        ws.current = new WebSocket(WEBSOCKET_URL);
-
-        ws.current.onopen = async () => {
-            addLog('Connection established. Sending automation payload...');
-            
-            // We need to convert blobs to base64 to send them over WebSocket
-            const epubBase64 = await blobToBase64(props.epubBlob);
-            
-            const payload = {
-                ...props,
-                epubBlob: epubBase64, // send as base64 string
-            };
-            ws.current?.send(JSON.stringify(payload));
-        };
-
-        ws.current.onmessage = (event) => {
-            const update = JSON.parse(event.data) as BotUpdate;
-            switch (update.type) {
-                case 'log':
-                    addLog(update.message);
-                    break;
-                case 'status':
-                    setStatus(update.status);
-                    break;
-                case 'progress':
-                    setProgress(update.progress);
-                    break;
-                case 'captcha':
-                    setStatus('captcha');
-                    setCaptchaImageUrl(update.imageUrl || null);
-                    addLog('[BACKEND] Paused. Awaiting manual CAPTCHA input.');
-                    break;
-                case 'success':
-                    setStatus('success');
-                    addLog('[BACKEND] SUCCESS! Book has been submitted to Amazon KDP.');
-                    ws.current?.close();
-                    break;
-                case 'error':
-                    setStatus('error');
-                    addLog(`[BACKEND] CRITICAL ERROR: ${update.message}`);
-                    ws.current?.close();
-                    break;
-            }
-        };
-
-        ws.current.onerror = (err) => {
-            console.error('WebSocket Error:', err);
-            addLog('WebSocket connection error. Is the backend server running?');
-            setStatus('error');
-        };
-
-        ws.current.onclose = () => {
-            addLog('Connection to backend closed.');
-        };
-
-        return () => {
-            ws.current?.close();
-        };
-
-    }, [props]);
-    
-    const blobToBase64 = (blob: Blob): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    }
 
     const handleCaptchaSubmit = async () => {
-        if (!captchaInput || !ws.current) return;
-        addLog(`[USER] Submitted CAPTCHA solution: "${captchaInput}"`);
-        ws.current.send(JSON.stringify({ type: 'captcha_solution', solution: captchaInput }));
-        setCaptchaImageUrl(null);
-        setCaptchaInput('');
-    };
+      if (!captchaInput) return;
+      addLog(`[USER] Submitted CAPTCHA solution: "${captchaInput}"`);
+      window.electronAPI.submitCaptcha(captchaInput);
+      setCaptchaImageUrl(null);
+      setCaptchaInput('');
+  };
 
     return (
         <div className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-4">

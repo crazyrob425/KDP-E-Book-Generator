@@ -2,32 +2,54 @@
   "name": "fraudrob's-ai-book-factory",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "tsc && vite build && electron-builder",
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"cross-env BROWSER=none vite\" \"wait-on tcp:5173 && electron .\"",
+    "electron:build": "vite build && tsc && electron-builder"
+  },
+  "build": {
+    "appId": "com.fraudrob.aiauthor",
+    "productName": "KDP E-Book Generator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+        "target": "nsis"
+    }
   },
   "dependencies": {
-    "react-dom": "^19.2.0",
     "@google/genai": "^1.28.0",
-    "react": "^19.2.0",
-    "jszip": "3.10.1",
-    "epub-gen-es": "1.0.1",
-    "fabric": "^6.9.0",
+    "buffer": "^6.0.3",
+    "electron-squirrel-startup": "^1.0.1",
     "express": "^5.1.0",
-    "http": "^0.0.1-security",
-    "ws": "^8.18.3",
-    "playwright": "^1.56.1",
+    "fabric": "^6.9.0",
     "fs": "^0.0.1-security",
-    "path": "^0.12.7",
+    "http": "^0.0.1-security",
+    "jszip": "3.10.1",
     "os": "^0.1.2",
-    "buffer": "^6.0.3"
+    "path": "^0.12.7",
+    "playwright": "^1.56.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "wait-on": "^7.2.0"
   }
 }

@@ -16,6 +16,7 @@ import { SparklesIcon, UserCircleIcon, TrashIcon, RocketLaunchIcon, CheckBadgeIc
 import AuthorProfileModal from './components/AuthorProfileModal';
 import BatchMode from './components/BatchMode';
 import KdpAutomationBot from './components/KdpAutomationBot';
+import TitleBar from './components/TitleBar';
 
 
 const pageRangeToChapterCount = (pageRange: string): number => {
@@ -853,68 +854,92 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-200 font-sans p-4 sm:p-6 md:p-8 flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-violet-500/30 pt-8">
+      <TitleBar />
+      
+      {/* Header */}
+      <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-8 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-violet-600 to-indigo-600 p-2 rounded-lg shadow-lg shadow-violet-900/20">
+                <SparklesIcon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                  KDP E-Book Generator
+                </h1>
+                <p className="text-xs text-slate-500 font-medium tracking-wide">AI-POWERED PUBLISHING ENGINE</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-4">
+                {bookOutline && (
+                     <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/50 border border-slate-700">
+                        <CheckBadgeIcon className="w-4 h-4 text-emerald-400" />
+                        <span className="text-xs font-medium text-slate-300 max-w-[150px] truncate">{bookOutline.title}</span>
+                     </div>
+                )}
+            
+              <button 
+                onClick={() => setIsAuthorModalOpen(true)} 
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-800 transition-colors text-slate-400 hover:text-white"
+              >
+                {authorProfile?.photo ? (
+                    <img src={authorProfile.photo.base64} className="w-6 h-6 rounded-full object-cover ring-2 ring-violet-500/30" alt="Profile"/>
+                ) : (
+                    <UserCircleIcon className="w-5 h-5" />
+                )}
+                <span className="text-sm font-medium">{authorProfile?.name || 'Author Profile'}</span>
+              </button>
+              
+              <button
+                onClick={handleResetProgress} 
+                className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-950/30 rounded-md transition-colors"
+                title="Reset Project"
+              >
+                <TrashIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+           {/* Progress Stepper */}
+          <div className="mt-6 mb-2">
+            <StepIndicator currentStep={currentStep} onStepClick={handleStepChange} />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && (
+            <div className="mb-6 bg-red-950/30 border border-red-900/50 rounded-lg p-4 flex items-start gap-3 animate-fade-in">
+                <div className="mt-1 text-red-500 shrink-0">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 className="text-sm font-medium text-red-400">Encountered an error</h3>
+                    <p className="text-sm text-red-300/80 mt-1">{error}</p>
+                    <button onClick={() => setError(null)} className="text-xs text-red-400 hover:text-red-300 mt-2 underline">Dismiss</button>
+                </div>
+            </div>
+        )}
+
+        {renderCurrentStep()}
+      </main>
+      
+       {/* Modals */}
       {isAuthorModalOpen && (
-        <AuthorProfileModal
-          profile={authorProfile}
-          onSave={handleSaveAuthorProfile}
-          onClose={() => setIsAuthorModalOpen(false)}
-          bookOutline={bookOutline}
-          marketReport={marketReport}
+        <AuthorProfileModal 
+            isOpen={isAuthorModalOpen} 
+            onClose={() => setIsAuthorModalOpen(false)} 
+            currentProfile={authorProfile}
+            onSave={handleSaveAuthorProfile}
         />
       )}
-      <div className="max-w-7xl mx-auto w-full flex-grow">
-        <header className="text-center relative">
-          <div className="absolute top-0 right-0 flex items-center gap-2">
-            <button
-              onClick={handleResetProgress}
-              className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-              aria-label="Reset Progress"
-              title="Reset Progress"
-            >
-              <TrashIcon className="w-7 h-7" />
-            </button>
-            <button 
-              onClick={() => setIsAuthorModalOpen(true)} 
-              className="p-2 text-slate-400 hover:text-violet-400 transition-colors"
-              aria-label="Author Profile"
-              title="Author Profile"
-            >
-              <UserCircleIcon className="w-8 h-8" />
-            </button>
-          </div>
-          <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-emerald-400 font-serif flex items-center justify-center gap-3">
-            <SparklesIcon className="w-10 h-10" />
-            FraudRob's AI Book Factory
-          </h1>
-          <p className="mt-2 text-slate-400">Your AI-powered partner for creating bestselling Amazon KDP books.</p>
-        </header>
 
-        <main className="mt-8">
-          <StepIndicator currentStep={currentStep} setStep={handleStepChange} />
-          {error && <div className="my-4 p-4 bg-red-900/50 border border-red-700 text-red-300 rounded-md text-center">{error}</div>}
-          <div className="mt-8">
-            {renderCurrentStep()}
-          </div>
-        </main>
-        
-        <footer className="text-center mt-12 flex justify-center gap-4 pb-8">
-            {currentStep > AppStep.MarketResearch && (
-                <button onClick={() => setCurrentStep(s => s - 1)} className="text-slate-400 hover:text-white transition-colors">
-                    &larr; Back
-                </button>
-            )}
-            {currentStep < AppStep.Review && (
-                 <button 
-                    onClick={() => setCurrentStep(s => s + 1)} 
-                    disabled={!canProceed()}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-md transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
-                >
-                    Next Step &rarr;
-                </button>
-            )}
-        </footer>
-      </div>
 
       {/* System Resource Footer Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 p-2 flex justify-between items-center text-xs text-slate-500 z-40 px-6">
