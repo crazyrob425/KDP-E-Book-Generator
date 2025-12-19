@@ -1,7 +1,8 @@
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron';
 import path from 'path';
 import fs from 'fs/promises';
 import { runAutomation } from '../server/automation-worker';
+import { fetchGoogleTrends, fetchAmazonCompetitors, fetchAmazonSuggestions } from '../server/market-research-worker';
 import { KdpAutomationPayload, BotUpdate } from '../types';
 
 
@@ -112,3 +113,52 @@ ipcMain.handle('stop-automation', async () => {
        automationGenerator = null;
    }
 });
+
+// --- MARKET RESEARCH HANDLERS ---
+
+ipcMain.handle('market-research:trends', async (_, keyword: string) => {
+    return await fetchGoogleTrends(keyword);
+});
+
+ipcMain.handle('market-research:competitors', async (_, keyword: string) => {
+    return await fetchAmazonCompetitors(keyword);
+});
+
+// --- FILE SYSTEM HANDLERS ---
+
+ipcMain.handle('save-file', async (event, data: string, filename: string) => {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Save Project',
+        defaultPath: filename,
+        filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    });
+    
+    if (canceled || !filePath) return { success: false };
+    
+    try {
+        await fs.writeFile(filePath, data, 'utf-8');
+        return { success: true, filePath };
+    } catch (e) {
+        console.error('Failed to save file:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+
+ipcMain.handle('load-file', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+        title: 'Load Project',
+        filters: [{ name: 'JSON Files', extensions: ['json'] }],
+        properties: ['openFile']
+    });
+    
+    if (canceled || filePaths.length === 0) return { success: false };
+    
+    try {
+        const data = await fs.readFile(filePaths[0], 'utf-8');
+        return { success: true, data };
+    } catch (e) {
+        console.error('Failed to load file:', e);
+        return { success: false, error: (e as Error).message };
+    }
+});
+

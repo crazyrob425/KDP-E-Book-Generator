@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload } from './types';
 import * as geminiService from './services/geminiService';
+import * as realMarketService from './services/realMarketService';
 import * as storageService from './services/storageService';
 
 import StepIndicator from './components/shared/StepIndicator';
@@ -18,6 +19,9 @@ import BatchMode from './components/BatchMode';
 import KdpAutomationBot from './components/KdpAutomationBot';
 import TitleBar from './components/TitleBar';
 
+
+import { useAutoSave } from './hooks/useAutoSave';
+import AutoSaveIndicator from './components/shared/AutoSaveIndicator';
 
 const pageRangeToChapterCount = (pageRange: string): number => {
     const firstNum = parseInt(pageRange.split('-')[0], 10);
@@ -70,6 +74,20 @@ function App() {
   // BATCH MODE STATE
   const [batchProjects, setBatchProjects] = useState<BatchProject[]>([]);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
+
+  // --- AUTO SAVE ---
+  const { lastSaved, isSaving: isAutoSaving } = useAutoSave({
+      mode,
+      currentStep,
+      marketReport,
+      bookOutline,
+      authorProfile,
+      pagesPerChapter,
+      bookCoverUrl,
+      kdpMarketingInfo,
+      selectedGenre,
+      hasViewedReport
+  });
 
   const handleGenerateExampleCover = useCallback(async () => {
     setIsGeneratingExampleCover(true);
@@ -267,7 +285,7 @@ function App() {
       setIsLoading(true);
       setError(null);
       try {
-        let report = await geminiService.generateMarketReport(topicString, genreString);
+        let report = await realMarketService.generateRealMarketReport(topicString, genreString);
         setMarketReport(report);
         setHasViewedReport(false);
         setCurrentStep(AppStep.Outline);
@@ -759,6 +777,72 @@ function App() {
   }
   
   // Loading State for DB
+  // NATIVE FILE SYSTEM HANDLERS
+  const handleSaveProject = async () => {
+    const projectState = {
+        version: 1,
+        date: new Date().toISOString(),
+        mode,
+        currentStep,
+        selectedGenre,
+        marketReport,
+        bookOutline,
+        bookCoverUrl,
+        authorProfile,
+        kdpMarketingInfo,
+        pagesPerChapter,
+        automationPayload,
+        chapterLoadingStates: {} // Don't save loading states
+    };
+
+    const fileName = bookOutline?.title ? `${bookOutline.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json` : 'kdp-project.json';
+    
+    try {
+        const result = await window.electronAPI.saveFile(JSON.stringify(projectState, null, 2), fileName);
+        if (result.success) {
+            alert(`Project saved successfully to: ${result.filePath}`);
+        } else if (result.error) {
+            alert(`Failed to save project: ${result.error}`);
+        }
+    } catch (e) {
+        console.error("Save failed", e);
+        alert("An error occurred while saving.");
+    }
+  };
+
+  const handleLoadProject = async () => {
+      try {
+          const result = await window.electronAPI.loadFile();
+          if (result.success && result.data) {
+              const data = JSON.parse(result.data);
+              
+              if (window.confirm("Load this project? Current progress will be overwritten.")) {
+                  // Restore State
+                  if (data.mode) setMode(data.mode);
+                  if (data.currentStep) setCurrentStep(data.currentStep);
+                  if (data.selectedGenre) setSelectedGenre(data.selectedGenre);
+                  if (data.marketReport) setMarketReport(data.marketReport);
+                  if (data.bookOutline) setBookOutline(data.bookOutline);
+                  if (data.bookCoverUrl) setBookCoverUrl(data.bookCoverUrl);
+                  if (data.authorProfile) setAuthorProfile(data.authorProfile);
+                  if (data.kdpMarketingInfo) setKdpMarketingInfo(data.kdpMarketingInfo);
+                  if (data.pagesPerChapter) setPagesPerChapter(data.pagesPerChapter);
+                  if (data.automationPayload) setAutomationPayload(data.automationPayload);
+                  
+                  // Reset temporary UI states
+                  setError(null);
+                  setChapterLoadingStates({});
+                  setHasViewedReport(true); // Assume viewed if loading a project past research
+              }
+          } else if (result.error) {
+              alert(`Failed to load project: ${result.error}`);
+          }
+      } catch (e) {
+         console.error("Load failed", e);
+         alert("Failed to parse project file.");
+      }
+  };
+
   if (isLoading) {
       return (
           <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -854,8 +938,8 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-violet-500/30 pt-8">
-      <TitleBar />
+    <div className="pt-8 min-h-screen flex flex-col bg-slate-900 text-slate-200 font-sans selection:bg-indigo-500 selection:text-white">
+      <TitleBar onSave={handleSaveProject} onLoad={handleLoadProject} />
       
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-8 z-40">
@@ -900,6 +984,11 @@ function App() {
               >
                 <TrashIcon className="w-5 h-5" />
               </button>
+              
+               {/* Auto Save Status */}
+              <div className="hidden lg:block ml-2 border-l border-slate-700 pl-4">
+                  <AutoSaveIndicator isSaving={isAutoSaving} lastSaved={lastSaved} />
+              </div>
             </div>
           </div>
           
@@ -933,10 +1022,11 @@ function App() {
        {/* Modals */}
       {isAuthorModalOpen && (
         <AuthorProfileModal 
-            isOpen={isAuthorModalOpen} 
-            onClose={() => setIsAuthorModalOpen(false)} 
-            currentProfile={authorProfile}
+            profile={authorProfile}
             onSave={handleSaveAuthorProfile}
+            onClose={() => setIsAuthorModalOpen(false)} 
+            bookOutline={bookOutline}
+            marketReport={marketReport}
         />
       )}
 

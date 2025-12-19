@@ -48,7 +48,7 @@ const MarketReportDisplay: React.FC<MarketReportDisplayProps> = ({ report, onPro
         {/* Google Trends Simulation */}
         {report.googleTrends && (
              <Card className="bg-slate-900/50">
-                <h3 className="text-xl font-semibold text-emerald-400 mb-2">Simulated Google Trends Insights</h3>
+                <h3 className="text-xl font-semibold text-emerald-400 mb-2">Live Google Trends Insights</h3>
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
                         <h4 className="font-semibold text-slate-300">Interest Over Time</h4>

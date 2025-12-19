@@ -400,8 +400,8 @@ var require_node = __commonJS({
           }
           break;
         case "FILE":
-          var fs2 = require("fs");
-          stream2 = new fs2.SyncWriteStream(fd2, { autoClose: false });
+          var fs3 = require("fs");
+          stream2 = new fs3.SyncWriteStream(fd2, { autoClose: false });
           stream2._type = "fs";
           break;
         case "PIPE":
@@ -489,6 +489,7 @@ var require_electron_squirrel_startup = __commonJS({
 // electron/main.ts
 var import_electron = require("electron");
 var import_path2 = __toESM(require("path"));
+var import_promises2 = __toESM(require("fs/promises"));
 
 // server/automation-worker.ts
 var import_playwright = require("playwright");
@@ -598,6 +599,83 @@ async function* runAutomation(payload, sendUpdate) {
   }
 }
 
+// server/market-research-worker.ts
+var import_playwright2 = require("playwright");
+var import_google_trends_api = __toESM(require("google-trends-api"));
+async function fetchGoogleTrends(keyword) {
+  try {
+    const results = await import_google_trends_api.default.interestOverTime({ keyword });
+    const data = JSON.parse(results);
+    if (!data.default || !data.default.timelineData) return null;
+    const timeline = data.default.timelineData.map((item) => ({
+      month: item.formattedAxisTime,
+      // e.g. "Dec 2023"
+      value: item.value[0]
+    }));
+    const relatedRes = await import_google_trends_api.default.relatedQueries({ keyword });
+    const relatedData = JSON.parse(relatedRes);
+    const related = relatedData.default?.rankedList?.[0]?.rankedKeyword?.slice(0, 5).map((item) => ({
+      query: item.query,
+      value: item.value
+      // interest level
+    })) || [];
+    return {
+      interestOverTime: timeline,
+      relatedQueries: related
+    };
+  } catch (e) {
+    console.error("Google Trends Error:", e);
+    return null;
+  }
+}
+async function fetchAmazonCompetitors(keyword) {
+  let browser = null;
+  try {
+    browser = await import_playwright2.chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    });
+    const page = await context.newPage();
+    const query = encodeURIComponent(keyword + " books");
+    await page.goto(`https://www.amazon.com/s?k=${query}&i=stripbooks`, { waitUntil: "domcontentloaded" });
+    await page.waitForTimeout(2e3);
+    const results = await page.evaluate(() => {
+      const items = document.querySelectorAll('.s-result-item[data-component-type="s-search-result"]');
+      const data = [];
+      items.forEach((item) => {
+        if (data.length >= 6) return;
+        const titleEl = item.querySelector("h2 a span");
+        const authorEl = item.querySelector(".a-row .a-size-base");
+        const priceEl = item.querySelector(".a-price .a-offscreen");
+        const ratingEl = item.querySelector('i[class*="a-star-small"] span');
+        const reviewCountEl = item.querySelector('span[aria-label$="stars"] + span span');
+        const reviewCountLink = item.querySelector('a[href*="#customerReviews"] span');
+        const imgEl = item.querySelector(".s-image");
+        if (titleEl) {
+          data.push({
+            title: titleEl.textContent?.trim(),
+            author: authorEl ? authorEl.textContent?.trim() : "Unknown",
+            // This selector is flaky
+            price: priceEl ? priceEl.textContent?.trim() : "N/A",
+            rating: ratingEl ? ratingEl.textContent?.trim() : "N/A",
+            reviewCount: reviewCountLink ? reviewCountLink.textContent?.trim() : "0",
+            url: "",
+            // We can get href if needed
+            imgUrl: imgEl ? imgEl.src : ""
+          });
+        }
+      });
+      return data;
+    });
+    return results;
+  } catch (e) {
+    console.error("Amazon Scraping Error:", e);
+    return [];
+  } finally {
+    if (browser) await browser.close();
+  }
+}
+
 // electron/main.ts
 if (require_electron_squirrel_startup()) {
   import_electron.app.quit();
@@ -686,5 +764,41 @@ import_electron.ipcMain.handle("stop-automation", async () => {
   if (automationGenerator) {
     await automationGenerator.return();
     automationGenerator = null;
+  }
+});
+import_electron.ipcMain.handle("market-research:trends", async (_, keyword) => {
+  return await fetchGoogleTrends(keyword);
+});
+import_electron.ipcMain.handle("market-research:competitors", async (_, keyword) => {
+  return await fetchAmazonCompetitors(keyword);
+});
+import_electron.ipcMain.handle("save-file", async (event, data, filename) => {
+  const { canceled, filePath } = await import_electron.dialog.showSaveDialog({
+    title: "Save Project",
+    defaultPath: filename,
+    filters: [{ name: "JSON Files", extensions: ["json"] }]
+  });
+  if (canceled || !filePath) return { success: false };
+  try {
+    await import_promises2.default.writeFile(filePath, data, "utf-8");
+    return { success: true, filePath };
+  } catch (e) {
+    console.error("Failed to save file:", e);
+    return { success: false, error: e.message };
+  }
+});
+import_electron.ipcMain.handle("load-file", async () => {
+  const { canceled, filePaths } = await import_electron.dialog.showOpenDialog({
+    title: "Load Project",
+    filters: [{ name: "JSON Files", extensions: ["json"] }],
+    properties: ["openFile"]
+  });
+  if (canceled || filePaths.length === 0) return { success: false };
+  try {
+    const data = await import_promises2.default.readFile(filePaths[0], "utf-8");
+    return { success: true, data };
+  } catch (e) {
+    console.error("Failed to load file:", e);
+    return { success: false, error: e.message };
   }
 });

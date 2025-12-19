@@ -15,7 +15,7 @@ export default defineConfig({
             bundle: true,
             platform: 'node',
             outdir: 'dist-electron',
-            external: ['electron', 'playwright', 'express', 'ws', 'buffer'], // Externalize backend deps
+            external: ['electron', 'playwright', 'express', 'ws', 'buffer', 'google-trends-api'], // Externalize backend deps
             format: 'cjs',
          });
       }

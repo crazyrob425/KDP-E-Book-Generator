@@ -51,6 +51,7 @@ const AuthorProfileModal: React.FC<AuthorProfileModalProps> = ({ profile, onSave
   });
   
   const [isReimagining, setIsReimagining] = useState(false);
+  const [isQuickWriting, setIsQuickWriting] = useState(false);
   const [activeTab, setActiveTab] = useState<'basics' | 'media' | 'reviews' | 'marketing'>('basics');
 
   useEffect(() => {
@@ -113,6 +114,27 @@ const AuthorProfileModal: React.FC<AuthorProfileModalProps> = ({ profile, onSave
 
   const removeReview = (index: number) => {
       setFormData(prev => ({ ...prev, criticReviews: prev.criticReviews.filter((_, i) => i !== index) }));
+  };
+
+  const handleQuickWrite = async () => {
+    if (!formData.bio && !formData.expertise) {
+        alert("Please enter at least a rough draft in the Bio or Expertise fields for the AI to enhance.");
+        return;
+    }
+    
+    setIsQuickWriting(true);
+    try {
+        const enhancedData = await geminiService.quickEnhanceAuthorProfile(formData);
+        setFormData(prev => ({
+            ...prev,
+            ...enhancedData
+        }));
+    } catch (e) {
+        console.error("Quick Write failed", e);
+        alert("Failed to quick-write content. Please try again.");
+    } finally {
+        setIsQuickWriting(false);
+    }
   };
 
   const handleReImagine = async () => {
@@ -180,6 +202,27 @@ const AuthorProfileModal: React.FC<AuthorProfileModalProps> = ({ profile, onSave
             
             {activeTab === 'basics' && (
                 <div className="space-y-6 animate-fade-in">
+                    <div className="bg-slate-700/30 p-4 rounded-lg border border-violet-500/30 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-sm font-bold text-violet-300 flex items-center gap-2">
+                                <SparklesIcon className="w-4 h-4" /> 
+                                AI Quick Write
+                            </h3>
+                            <p className="text-xs text-slate-400">
+                                Enter rough notes below, then click this to turn them into a masterpiece.
+                            </p>
+                        </div>
+                        <Button 
+                            type="button" 
+                            onClick={handleQuickWrite} 
+                            disabled={isQuickWriting}
+                            variant="secondary"
+                            className="text-xs bg-violet-600/20 hover:bg-violet-600/40 border-violet-500/50"
+                        >
+                            {isQuickWriting ? <LoadingSpinner size="sm" message="Writing..." /> : 'Auto-Enhance Bio & Expertise'}
+                        </Button>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label htmlFor="name" className="block text-sm font-medium text-slate-300 mb-1">Author Name</label>

@@ -1,7 +1,12 @@
 import React from 'react';
-import { XIcon } from './icons';
+import { XIcon, DownloadIcon, UploadIcon } from './icons';
 
-const TitleBar: React.FC = () => {
+interface TitleBarProps {
+  onSave?: () => void;
+  onLoad?: () => void;
+}
+
+const TitleBar: React.FC<TitleBarProps> = ({ onSave, onLoad }) => {
   const handleMinimize = () => window.electronAPI.minimize();
   const handleMaximize = () => window.electronAPI.maximize();
   const handleClose = () => window.electronAPI.close();
@@ -10,11 +15,33 @@ const TitleBar: React.FC = () => {
     <div className="h-8 bg-slate-900 flex items-center justify-between select-none fixed top-0 left-0 right-0 z-[100] border-b border-slate-700">
       {/* Draggable Region */}
       <div className="flex-grow h-full flex items-center px-4" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
-        <span className="text-xs text-slate-400 font-mono">KDP E-Book Generator</span>
+        <span className="text-xs text-slate-400 font-mono mr-4">KDP E-Book Generator</span>
+      </div>
+
+      {/* File Controls (Non-draggable) */}
+      <div className="flex h-full mr-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+         {onSave && (
+            <button 
+              onClick={onSave}
+              title="Save Project"
+              className="px-3 h-full flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            >
+              <DownloadIcon className="w-4 h-4" />
+            </button>
+         )}
+         {onLoad && (
+            <button 
+              onClick={onLoad}
+              title="Load Project"
+              className="px-3 h-full flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            >
+              <UploadIcon className="w-4 h-4" />
+            </button>
+         )}
       </div>
 
       {/* Window Controls (Non-draggable) */}
-      <div className="flex h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+      <div className="flex h-full border-l border-slate-700" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <button 
           onClick={handleMinimize}
           className="w-12 h-full flex items-center justify-center hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"

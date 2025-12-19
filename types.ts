@@ -145,14 +145,83 @@ export interface ElectronAPI {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;
   close: () => Promise<void>;
+  
   startAutomation: (payload: KdpAutomationPayload) => Promise<void>;
   submitCaptcha: (solution: string) => Promise<void>;
   stopAutomation: () => Promise<void>;
+  
+  saveFile: (data: string, filename: string) => Promise<{ success: boolean; filePath?: string; error?: string }>;
+  loadFile: () => Promise<{ success: boolean; data?: string; error?: string }>;
+
   onAutomationUpdate: (callback: (update: BotUpdate) => void) => () => void;
+
+  // Market Research
+  fetchGoogleTrends: (keyword: string) => Promise<GoogleTrendsData | null>;
+  fetchAmazonCompetitors: (keyword: string) => Promise<any[]>; // Using any[] to avoid circular dependency or duplication for now, strictly it's ScrapedBook[]
+  fetchAmazonSuggestions: (keyword: string) => Promise<string[]>;
 }
 
 declare global {
   interface Window {
     electronAPI: ElectronAPI;
   }
+}
+
+// --- NEW EXPANSION TYPES ---
+
+export interface AudiobookConfig {
+    provider: 'elevenlabs' | 'openai';
+    voiceId: string;
+    model?: string; // e.g. 'eleven_monolingual_v1' or 'tts-1-hd'
+    apiKey?: string; // Optional, user might provide it in UI
+}
+
+export interface UniverseContext {
+    id: string;
+    name: string;
+    description: string;
+    // Shared elements across books
+    factions: { name: string; description: string }[];
+    characters: { name: string; description: string; role: string }[]; 
+    locations: { name: string; description: string }[];
+    lore: { topic: string; details: string }[];
+    
+    // Books in this universe
+    books: { 
+        id: string; // matches Project ID
+        title: string; 
+        seriesOrder?: number;
+        isSequel?: boolean; 
+    }[];
+}
+
+export interface ProjectFileV2 {
+    version: 2;
+    lastSaved: string; // ISO Date
+    
+    // Core Data
+    bookOutline: BookOutline;
+    marketReport: MarketReport | null;
+    authorProfile: AuthorProfile | null;
+    marketingInfo: KdpMarketingInfo | null;
+    
+    // Visuals
+    covers: {
+        current: string | null;
+        history: string[]; // Keep track of gen iterations
+    };
+    
+    // Expansion Data
+    universeId?: string; // Link to a UniverseContext
+    seriesName?: string;
+    
+    // Configs
+    audiobookConfig?: AudiobookConfig;
+    
+    // App State Preservation
+    uiState: {
+        currentStep: AppStep;
+        pagesPerChapter: string;
+        selectedGenre?: GenreSuggestion;
+    };
 }

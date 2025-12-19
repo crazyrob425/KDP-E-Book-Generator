@@ -4,7 +4,7 @@ import { BookOutline, MarketReport, GenreSuggestion, TopicSuggestion, KdpMarketi
 
 
 let aiInstance: GoogleGenAI | null = null;
-const getAi = () => {
+export const getAi = () => {
   if (!aiInstance) {
     const key = import.meta.env.VITE_GOOGLE_API_KEY || process.env.API_KEY;
     if (!key) {
@@ -563,4 +563,44 @@ export const applyLiteraryCritique = async (chapterTitle: string, currentContent
     content = content.trim().replace(/^Chapter\s+\d+[:\s].*?\n+/i, '');
 
     return content.trim();
+};
+
+export const quickEnhanceAuthorProfile = async (currentProfile: AuthorProfile): Promise<Partial<AuthorProfile>> => {
+    const prompt = `
+    You are the **Grand Master Ebook Marketing Genius, SEO Expert, and Advertising Agent**.
+    You possess god-like skills in boosting the ranking and sales of new ebooks.
+    
+    **Your Mission:**
+    Rewrite and expand the author's "Bio" and "Book-Specific Expertise" to be incredibly professional, engaging, and SEO-optimized.
+    You must take the user's rough input and transform it into a masterpiece that readers will love.
+    
+    **Inputs:**
+    Current Bio Draft: "${currentProfile.bio}"
+    Current Expertise Draft: "${currentProfile.expertise}"
+    
+    **Strict Rules & Constraints:**
+    1.  **Grand Master SEO:** Use keywords naturally to boost authority and discoverability.
+    2.  **Expand & Enhance:** If the input is short, expand it into a full, compelling narrative. Ask rhetorical questions about their life (implied) and answer them in the text.
+    3.  **Topic Integration:** Ensure the core subject/idea the user is writing about is central to the bio.
+    4.  **No Taboos:** Avoid controversial, polarizing, or widely disliked topics/attitudes. Keep it universally appealing.
+    5.  **IGNORE CONTACT INFO:** Do NOT generate, modify, or even mention specific contact details like email addresses, phone numbers, or social media handles in the text. The user has separate fields for those.
+    6.  **Output Format:** Return a JSON object with strictly two fields: "bio" and "expertise".
+    `;
+
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    bio: { type: Type.STRING },
+                    expertise: { type: Type.STRING }
+                }
+            }
+        }
+    }));
+
+    return JSON.parse(response.text || '{}');
 };

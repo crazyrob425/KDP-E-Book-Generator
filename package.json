@@ -22,7 +22,7 @@
       "package.json"
     ],
     "win": {
-        "target": "nsis"
+      "target": "nsis"
     }
   },
   "dependencies": {
@@ -32,6 +32,7 @@
     "express": "^5.1.0",
     "fabric": "^6.9.0",
     "fs": "^0.0.1-security",
+    "google-trends-api": "^4.9.2",
     "http": "^0.0.1-security",
     "jszip": "3.10.1",
     "os": "^0.1.2",
