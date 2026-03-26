@@ -1,14 +1,10 @@
 [package]
-name = "app"
+name = "binary-books-e-crafter"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "Binary Books E-Crafter"
+authors = ["Binary Books"]
 edition = "2021"
 rust-version = "1.77.2"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 name = "app_lib"
@@ -23,3 +19,7 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.9.5", features = [] }
 tauri-plugin-log = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+thiserror = "1"
+uuid = { version = "1", features = ["v4", "serde"] }

@@ -85,7 +85,47 @@ Don't write blindly. The app analyzes trends before you type a single word.
 
 ---
 
-## 💾 Installation & Setup
+## 🖥️ Desktop App (Tauri v2 — Windows)
+
+The app ships as a native Windows desktop application built with [Tauri v2](https://tauri.app/). The Rust backend provides a bundled SQLite database (no external DB required) and exposes background job progress events to the frontend.
+
+### Windows Prerequisites
+
+| Tool | Install |
+|------|---------|
+| **Rust** (stable) | <https://rustup.rs/> |
+| **Node.js ≥ 20** | <https://nodejs.org/> |
+| **WebView2 Runtime** | Usually pre-installed on Windows 10/11; if the app fails to open, download the **Evergreen Bootstrapper** from [Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) and run it |
+| **Visual Studio Build Tools** | Install the "Desktop development with C++" workload from [VS Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) |
+
+### Run locally in dev mode
+
+```powershell
+npm install
+npm run tauri:dev
+```
+
+This starts the Vite dev server and the Tauri desktop window simultaneously.
+
+### Build a release MSI locally
+
+```powershell
+npm run tauri:build
+# Installer: src-tauri\target\release\bundle\msi\*.msi
+```
+
+### Download a CI-built MSI (no local build required)
+
+1. Go to the **Actions** tab of this repository.
+2. Click the latest **"Build Windows MSI"** workflow run.
+3. Scroll to **Artifacts** → download **`windows-msi`**.
+4. Extract the zip and run the `.msi` installer.
+
+The workflow runs automatically on every push to `main` and can also be triggered manually via **Actions → Build Windows MSI → Run workflow**.
+
+---
+
+## 💾 Web / Development Setup
 
 1.  **Clone the Repo**
     ```bash
@@ -104,9 +144,9 @@ Don't write blindly. The app analyzes trends before you type a single word.
     API_KEY=your_google_gemini_api_key_here
     ```
 
-4.  **Run the App**
+4.  **Run the App (web only)**
     ```bash
-    npm start
+    npm run dev
     ```
 
 ### 🤖 Setting up the Automation Bot (Optional)
