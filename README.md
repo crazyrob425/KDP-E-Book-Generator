@@ -78,10 +78,25 @@ Don't write blindly. The app analyzes trends before you type a single word.
 
 *   **Frontend:** React 18, TypeScript, Tailwind CSS
 *   **AI Core:** Google GenAI SDK (Gemini 2.5 Flash, Gemini 3.0 Pro)
+*   **Desktop Wrapper:** Tauri v2 (Rust)
 *   **State Management:** IndexedDB (Custom wrapper for massive storage capacity beyond 5MB)
 *   **Graphics:** FabricJS (Canvas manipulation), Pollinations.ai (Image Generation)
 *   **Export:** JSZip, Epub-Gen-ES
 *   **Backend (Optional Bot):** Node.js, Express, WebSockets, Playwright
+
+---
+
+## 🗂️ App Data Location
+
+All application data (SQLite databases, caches, settings) is stored under the OS **AppData** directory:
+
+| Platform | Path |
+| :--- | :--- |
+| **Windows** | `%APPDATA%\com.kdpebookgenerator.app\` |
+| **macOS** | `~/Library/Application Support/com.kdpebookgenerator.app/` |
+| **Linux** | `~/.local/share/com.kdpebookgenerator.app/` |
+
+Window size and position are automatically saved on exit and restored on the next launch (powered by `tauri-plugin-window-state`).
 
 ---
 
