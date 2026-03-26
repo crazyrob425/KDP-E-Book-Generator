@@ -81,7 +81,30 @@ Don't write blindly. The app analyzes trends before you type a single word.
 *   **State Management:** IndexedDB (Custom wrapper for massive storage capacity beyond 5MB)
 *   **Graphics:** FabricJS (Canvas manipulation), Pollinations.ai (Image Generation)
 *   **Export:** JSZip, Epub-Gen-ES
+*   **Desktop Wrapper:** Tauri v2 (Rust)
 *   **Backend (Optional Bot):** Node.js, Express, WebSockets, Playwright
+
+---
+
+## 🗂️ AppData Storage (Desktop)
+
+When running as a Tauri desktop app, all application data is stored under the OS AppData directory so it is never mixed with project files.
+
+| Data | Path |
+| :--- | :--- |
+| Window size / position | `%APPDATA%\com.tauri.dev\window-state.json` |
+| App state & databases | `%APPDATA%\com.tauri.dev\` |
+
+> **macOS / Linux** use the platform-equivalent paths:
+> *   macOS: `~/Library/Application Support/com.tauri.dev/`
+> *   Linux: `~/.local/share/com.tauri.dev/`
+
+### Window State Behaviour
+
+*   **Restored on launch** – the previous window size and position are read from `window-state.json` and applied before the window is shown, so there is no visible flicker.
+*   **Maximized state** – if the app was closed while maximized it reopens maximized.
+*   **Off-screen clamping** – on launch the saved bounds are clamped to the current monitor's work area, so the window can never open off-screen after a monitor layout change.
+*   **Auto-saved** – any resize or move triggers a debounced write (≤ 500 ms after activity stops). An additional immediate save is performed when the window is closed.
 
 ---
 
