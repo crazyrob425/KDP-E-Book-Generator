@@ -74,7 +74,46 @@ Don't write blindly. The app analyzes trends before you type a single word.
 
 ---
 
-## 🛠️ Technical Stack
+## 🖥️ Desktop App (Tauri v2)
+
+The application ships as a Tauri v2 desktop wrapper on Windows, macOS, and Linux.
+
+### Window State Persistence
+
+The app automatically saves and restores the window size, position, and maximized state between sessions.
+
+**Where the state is stored (Windows):**
+
+```
+%APPDATA%\KDP E-Book Generator\window-state.json
+```
+
+Example file:
+
+```json
+{
+  "x": 120,
+  "y": 80,
+  "width": 1280,
+  "height": 800,
+  "maximized": false
+}
+```
+
+**Restore algorithm on startup:**
+
+1. **Choose monitor** – prefer the monitor that contains the saved top-left corner (i.e. the same monitor as before); if no monitor contains that point, fall back to the primary monitor; if that is unavailable, use the first monitor in the list.
+2. **Shrink to fit** – if the saved `width` or `height` exceeds the chosen monitor's work area (excluding the taskbar and reserved OS margins), the window is shrunk to fit entirely within the work area.
+3. **Clamp position** – the window rectangle is shifted inward so that every edge lies within the work area (with an 8 px margin).
+4. **Restore normal bounds first, then maximize** – if `maximized` was `true`, the sane/clamped normal bounds are applied first, then the window is maximized. This ensures the window can always be unmaximized cleanly.
+
+**Debounced saves:**
+
+Window state is written to disk at most once every 500 ms after the last move, resize, maximize, or unmaximize event.
+
+---
+
+
 
 *   **Frontend:** React 18, TypeScript, Tailwind CSS
 *   **AI Core:** Google GenAI SDK (Gemini 2.5 Flash, Gemini 3.0 Pro)
