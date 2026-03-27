@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { BookOutline, Chapter } from '../../types';
+import { BookOutline, Chapter, GenerationSettings } from '../../types';
 import Button from '../shared/Button';
 import Card from '../shared/Card';
 import { SparklesIcon, PhotoIcon, BookOpenIcon, ArrowPathIcon, PencilSquareIcon, XIcon, AcademicCapIcon } from '../icons';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import Modal from '../shared/Modal';
 import * as geminiService from '../../services/geminiService';
+import GenerationSettingsPanel from './content/GenerationSettingsPanel';
+import TokenDashboard from '../shared/TokenDashboard';
 
 interface ContentGenerationStepProps {
   outline: BookOutline | null;
@@ -20,6 +22,9 @@ interface ContentGenerationStepProps {
   isGeneratingFullManuscript: boolean;
   fullManuscriptGenerationProgress: string;
   onUpdateChapterStyle: (chapterIndex: number, style: string) => void;
+  generationSettings?: GenerationSettings;
+  onGenerationSettingsChange?: (settings: GenerationSettings) => void;
+  tokenDashboardKey?: number;
 }
 
 const illustrationStyles = [
@@ -45,6 +50,9 @@ const ContentGenerationStep: React.FC<ContentGenerationStepProps> = ({
   isGeneratingFullManuscript,
   fullManuscriptGenerationProgress,
   onUpdateChapterStyle,
+  generationSettings,
+  onGenerationSettingsChange,
+  tokenDashboardKey,
 }) => {
   const [activeChapterIndex, setActiveChapterIndex] = useState<number | null>(0);
   const [editedContent, setEditedContent] = useState<string>('');
@@ -277,6 +285,21 @@ const ContentGenerationStep: React.FC<ContentGenerationStepProps> = ({
                         </button>
                     ))}
                 </nav>
+
+                {/* Generation Settings Panel */}
+                {generationSettings && onGenerationSettingsChange && (
+                  <div className="mt-6">
+                    <GenerationSettingsPanel
+                      settings={generationSettings}
+                      onChange={onGenerationSettingsChange}
+                    />
+                  </div>
+                )}
+
+                {/* Token Dashboard */}
+                <div className="mt-4">
+                  <TokenDashboard refreshKey={tokenDashboardKey} />
+                </div>
             </Card>
 
             <div className="lg:col-span-2">

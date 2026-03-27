@@ -2,9 +2,14 @@
 // A lightweight wrapper around IndexedDB for handling large datasets (images, audio, manuscript)
 // This bypasses the 5MB localStorage limit, allowing for GBs of data.
 
+import { GenerationSettings, DEFAULT_GENERATION_SETTINGS } from '../types';
+import { v4 as uuidv4 } from 'uuid';
+
 const DB_NAME = 'BookFactoryDB';
 const STORE_NAME = 'app_state';
-const DB_VERSION = 1;
+/** app_settings store — persists GenerationSettings and other global prefs */
+const SETTINGS_STORE = 'app_settings';
+const DB_VERSION = 2; // bumped from 1 to add app_settings store
 
 export const initDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
@@ -16,6 +21,10 @@ export const initDB = (): Promise<IDBDatabase> => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
+      }
+      // v2 migration: add app_settings store
+      if (!db.objectStoreNames.contains(SETTINGS_STORE)) {
+        db.createObjectStore(SETTINGS_STORE);
       }
     };
 
@@ -59,6 +68,46 @@ export const clearState = async (key: string): Promise<void> => {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
     });
+};
+
+// ---------------------------------------------------------------------------
+// Generation settings persistence
+// ---------------------------------------------------------------------------
+
+const SETTINGS_KEY = 'generation_settings';
+
+/**
+ * Loads GenerationSettings from IndexedDB.
+ * Migrates missing fields to defaults (forward-compatible).
+ */
+export const loadGenerationSettings = async (): Promise<GenerationSettings> => {
+  const db = await initDB();
+  return new Promise((resolve) => {
+    const tx = db.transaction([SETTINGS_STORE], 'readonly');
+    const req = tx.objectStore(SETTINGS_STORE).get(SETTINGS_KEY);
+    req.onsuccess = () => {
+      const stored = req.result as Partial<GenerationSettings> | undefined;
+      const merged: GenerationSettings = {
+        ...DEFAULT_GENERATION_SETTINGS,
+        ...stored,
+        // Ensure projectSeed is always populated
+        projectSeed: stored?.projectSeed || uuidv4(),
+      };
+      resolve(merged);
+    };
+    req.onerror = () => resolve({ ...DEFAULT_GENERATION_SETTINGS, projectSeed: uuidv4() });
+  });
+};
+
+/** Persists GenerationSettings to IndexedDB */
+export const saveGenerationSettings = async (settings: GenerationSettings): Promise<void> => {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction([SETTINGS_STORE], 'readwrite');
+    const req = tx.objectStore(SETTINGS_STORE).put(settings, SETTINGS_KEY);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
 };
 
 // Requests the browser to treat this site's storage as "Persistent"

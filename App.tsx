@@ -1,9 +1,11 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload } from './types';
+import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload, GenerationSettings, DEFAULT_GENERATION_SETTINGS } from './types';
 import * as geminiService from './services/geminiService';
 import * as realMarketService from './services/realMarketService';
 import * as storageService from './services/storageService';
+import { clearMetrics } from './services/llmOrchestrator';
+import { loadPriorMemories } from './engine/memory/microSummary';
 
 import StepIndicator from './components/shared/StepIndicator';
 import MarketResearchStep from './components/steps/MarketResearchStep';
@@ -70,6 +72,11 @@ function App() {
   const [isPersistentStorage, setIsPersistentStorage] = useState(false);
   const [storageQuota, setStorageQuota] = useState<{usage: number, quota: number} | null>(null);
   const [isHighPerformanceMode, setIsHighPerformanceMode] = useState(true);
+
+  // --- GENERATION SETTINGS (token efficiency + chunked generation) ---
+  const [generationSettings, setGenerationSettings] = useState<GenerationSettings>(DEFAULT_GENERATION_SETTINGS);
+  /** Incremented to force TokenDashboard re-render after each generation call */
+  const [tokenDashboardKey, setTokenDashboardKey] = useState(0);
 
   // BATCH MODE STATE
   const [batchProjects, setBatchProjects] = useState<BatchProject[]>([]);
@@ -146,6 +153,14 @@ function App() {
             setIsLoading(false);
         }
         
+        // Load generation settings (new in v2 DB schema)
+        try {
+            const savedSettings = await storageService.loadGenerationSettings();
+            setGenerationSettings(savedSettings);
+        } catch (e) {
+            console.warn("Could not load generation settings, using defaults", e);
+        }
+
         // Check storage status
         const isPersisted = await navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false;
         setIsPersistentStorage(isPersisted);
@@ -351,6 +366,7 @@ function App() {
     try {
         let content;
         if (currentContent && currentContent.trim().length > 0) {
+            // Regeneration with guidance always uses the legacy path (diff-based in future)
             content = await geminiService.regenerateChapterWithGuidance(
                 chapter.title, 
                 chapter.summary, 
@@ -358,10 +374,29 @@ function App() {
                 pagesPerChapter,
                 instructions
             );
+        } else if (generationSettings.strategy === 'chunked') {
+            // Chunked multi-scene pipeline (default)
+            const priorMemories = await loadPriorMemories(chapter.chapter);
+            const outlineHash = bookOutline.tableOfContents
+              .map(c => c.title)
+              .join('|');
+            content = await geminiService.generateChapterContentChunked({
+                chapter,
+                bookTitle: bookOutline.title,
+                bookSubtitle: bookOutline.subtitle,
+                lengthGuidance: pagesPerChapter,
+                settings: generationSettings,
+                outlineHash,
+                rerollNonce: 0,
+                priorMemories,
+                onProgress: (msg) => setFullManuscriptGenerationProgress(msg),
+            });
         } else {
+            // Single-pass fallback
             content = await geminiService.generateChapterContent(chapter.title, chapter.summary, pagesPerChapter);
         }
 
+        setTokenDashboardKey(k => k + 1);
         setBookOutline(prev => {
             if (!prev) return null;
             const newToc = [...prev.tableOfContents];
@@ -373,8 +408,9 @@ function App() {
         setError(`Failed to generate content for Chapter ${chapter.chapter}.`);
     } finally {
         setChapterLoadingStates(prev => ({...prev, [chapter.chapter]: false}));
+        setFullManuscriptGenerationProgress('');
     }
-  }, [bookOutline, pagesPerChapter]);
+  }, [bookOutline, pagesPerChapter, generationSettings]);
 
   const handleUpdateChapterContent = useCallback((chapterIndex: number, content: string) => {
     setBookOutline(prev => {
@@ -899,6 +935,12 @@ function App() {
                   isGeneratingFullManuscript={isGeneratingFullManuscript}
                   fullManuscriptGenerationProgress={fullManuscriptGenerationProgress}
                   onUpdateChapterStyle={handleUpdateChapterStyle}
+                  generationSettings={generationSettings}
+                  onGenerationSettingsChange={async (s) => {
+                    setGenerationSettings(s);
+                    await storageService.saveGenerationSettings(s);
+                  }}
+                  tokenDashboardKey={tokenDashboardKey}
                />;
       case AppStep.Illustration:
         return <IllustrationStep chapters={bookOutline?.tableOfContents || []} onGenerateImage={handleGenerateImageForIllustrationStep} />;

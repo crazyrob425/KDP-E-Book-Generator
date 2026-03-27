@@ -167,6 +167,80 @@ declare global {
   }
 }
 
+// --- TOKEN EFFICIENCY & CHUNKED GENERATION TYPES ---
+
+export interface GenerationSettings {
+  /** 'chunked' = scene-by-scene (default) | 'single_pass' = legacy full chapter */
+  strategy: 'chunked' | 'single_pass';
+  /** Min scenes per chapter when strategy = 'chunked' (default 11) */
+  sceneCountMin: number;
+  /** Max scenes per chapter when strategy = 'chunked' (default 14) */
+  sceneCountMax: number;
+  /** Whether to run the emotional polish pass after stitching (default true) */
+  emotionalPolish: boolean;
+  /** Max % the polish pass may expand the text (default 6) */
+  polishExpansionCapPct: number;
+  /** Per-project random seed (uuid, generated once at project creation) */
+  projectSeed: string;
+}
+
+export const DEFAULT_GENERATION_SETTINGS: GenerationSettings = {
+  strategy: 'chunked',
+  sceneCountMin: 11,
+  sceneCountMax: 14,
+  emotionalPolish: true,
+  polishExpansionCapPct: 6,
+  projectSeed: '',
+};
+
+export interface TokenMetrics {
+  /** Estimated input tokens for the call (chars / 4 heuristic) */
+  estimatedInputTokens: number;
+  /** Estimated output tokens for the call */
+  estimatedOutputTokens: number;
+  /** Whether result was served from cache */
+  cacheHit: boolean;
+  /** Which agent / step produced this call */
+  step: string;
+  /** Unix timestamp */
+  timestamp: number;
+}
+
+export interface ProjectTokenTotals {
+  totalEstimatedInput: number;
+  totalEstimatedOutput: number;
+  cacheHits: number;
+  cacheMisses: number;
+  /** Calls list (kept for per-chapter breakdown) */
+  calls: TokenMetrics[];
+}
+
+export interface ScenePlan {
+  id: string;
+  purpose: string;
+  conflict: string;
+  turn: string;
+  requiredFactIds: string[];
+  wordTarget: number;
+  styleNotes: string;
+  endingHandoff: string;
+}
+
+export interface ChapterScenePlan {
+  chapterNumber: number;
+  sceneCount: number;
+  scenes: ScenePlan[];
+  /** rerollNonce incremented by "Re-roll" button */
+  rerollNonce: number;
+}
+
+export interface ChapterMemory {
+  chapterNumber: number;
+  summary: string;
+  microSummaries: string[];   // one per scene
+  continuityDelta: string[];  // new facts introduced in this chapter
+}
+
 // --- NEW EXPANSION TYPES ---
 
 export interface AudiobookConfig {

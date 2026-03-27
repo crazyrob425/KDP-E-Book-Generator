@@ -1,6 +1,12 @@
 /// <reference types="vite/client" />
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
-import { BookOutline, MarketReport, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AuthorProfile, Chapter } from '../types';
+import { BookOutline, MarketReport, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AuthorProfile, Chapter, GenerationSettings, DEFAULT_GENERATION_SETTINGS, ChapterMemory } from '../types';
+import { orchestratedCall } from './llmOrchestrator';
+import { buildChapterScenePlan } from '../engine/chunking/scenePlanner';
+import { writeScene } from '../engine/chunking/sceneWriter';
+import { stitchScenes } from '../engine/chunking/stitcher';
+import { polishChapter } from '../engine/chunking/emotionalPolish';
+import { saveChapterMemory, loadChapterMemory } from '../engine/memory/microSummary';
 
 
 let aiInstance: GoogleGenAI | null = null;
@@ -603,4 +609,149 @@ export const quickEnhanceAuthorProfile = async (currentProfile: AuthorProfile): 
     }));
 
     return JSON.parse(response.text || '{}');
+};
+
+// ---------------------------------------------------------------------------
+// Canonical voice contract (constant — maximises cache hits)
+// ---------------------------------------------------------------------------
+
+const DEFAULT_VOICE_CONTRACT = `POV: close third-person or first-person (match existing chapters).
+Tense: past tense.
+Tone: immersive, emotionally resonant, genre-appropriate.
+Format: Markdown prose — no meta-commentary, no preamble.
+Avoid clichés. Show, don't tell. Maintain continuity with prior chapters.`;
+
+// ---------------------------------------------------------------------------
+// Chunked chapter generation (default strategy)
+// ---------------------------------------------------------------------------
+
+export interface ChunkedChapterOptions {
+  chapter: Chapter;
+  bookTitle: string;
+  bookSubtitle?: string;
+  lengthGuidance: string;
+  settings?: GenerationSettings;
+  /** Optional hash of the outline for seeding (stable string) */
+  outlineHash?: string;
+  /** Increments to re-roll scene split */
+  rerollNonce?: number;
+  /** Already-loaded prior chapter memories (passed in to avoid double-fetching) */
+  priorMemories?: ChapterMemory[];
+  /** Progress callback: receives status messages during generation */
+  onProgress?: (message: string) => void;
+}
+
+/**
+ * Generates a chapter using the scene-chunked pipeline:
+ *   1. Scene plan (deterministic 11–14 scenes)
+ *   2. Per-scene drafting with rolling micro-summary
+ *   3. Local stitch (0 tokens)
+ *   4. Optional emotional polish pass (≤ expansionCapPct % expansion)
+ *
+ * Falls back to single-pass if settings.strategy === 'single_pass'.
+ */
+export const generateChapterContentChunked = async (
+  options: ChunkedChapterOptions
+): Promise<string> => {
+  const {
+    chapter,
+    bookTitle,
+    lengthGuidance,
+    settings = DEFAULT_GENERATION_SETTINGS,
+    outlineHash = 'default',
+    rerollNonce = 0,
+    priorMemories = [],
+    onProgress,
+  } = options;
+
+  const progress = (msg: string) => onProgress?.(msg);
+
+  // ── Single-pass fallback ──────────────────────────────────────────────────
+  if (settings.strategy === 'single_pass') {
+    progress('Generating chapter (single-pass)…');
+    return generateChapterContent(chapter.title, chapter.summary, lengthGuidance);
+  }
+
+  // ── Build continuity facts from prior memories ────────────────────────────
+  const continuityFacts: string[] = priorMemories.flatMap((m) => m.continuityDelta);
+
+  // ── Step 1: Scene plan ───────────────────────────────────────────────────
+  progress(`Planning scenes for Chapter ${chapter.chapter}…`);
+  const scenePlan = await buildChapterScenePlan(
+    chapter.chapter,
+    chapter.title,
+    chapter.summary,
+    bookTitle,
+    DEFAULT_VOICE_CONTRACT,
+    settings,
+    outlineHash,
+    rerollNonce,
+    continuityFacts
+  );
+
+  progress(`Scene plan ready: ${scenePlan.sceneCount} scenes`);
+
+  // ── Step 2: Per-scene drafting ───────────────────────────────────────────
+  const sceneDrafts: string[] = [];
+  const allMicroSummaries: string[] = [];
+  const allContinuityDeltas: string[] = [];
+  let prevMicroSummary = '';
+
+  // Bootstrap from last chapter's final micro-summary if available
+  const prevMemory = priorMemories
+    .filter((m) => m.chapterNumber < chapter.chapter)
+    .sort((a, b) => b.chapterNumber - a.chapterNumber)[0];
+  if (prevMemory?.microSummaries?.length) {
+    prevMicroSummary =
+      prevMemory.microSummaries[prevMemory.microSummaries.length - 1];
+  }
+
+  for (let i = 0; i < scenePlan.scenes.length; i++) {
+    const scene = scenePlan.scenes[i];
+    progress(`Writing scene ${i + 1} / ${scenePlan.sceneCount}…`);
+
+    const result = await writeScene({
+      scene,
+      prevMicroSummary,
+      voiceContract: DEFAULT_VOICE_CONTRACT,
+      factMap: {},          // extend with lore-engine facts when available
+      bookTitle,
+      chapterTitle: chapter.title,
+    });
+
+    sceneDrafts.push(result.sceneMarkdown);
+    allMicroSummaries.push(result.microSummary);
+    allContinuityDeltas.push(...result.continuityDelta);
+    prevMicroSummary = result.microSummary;
+  }
+
+  // ── Step 3: Stitch ───────────────────────────────────────────────────────
+  progress('Stitching scenes…');
+  const { markdown: stitched } = stitchScenes(sceneDrafts);
+
+  // ── Step 4: Emotional polish ─────────────────────────────────────────────
+  let finalContent = stitched;
+  if (settings.emotionalPolish) {
+    progress('Applying emotional polish…');
+    finalContent = await polishChapter({
+      stitchedChapter: stitched,
+      chapterSummary: chapter.summary,
+      voiceContract: DEFAULT_VOICE_CONTRACT,
+      expansionCapPct: settings.polishExpansionCapPct,
+      bookTitle,
+      chapterTitle: chapter.title,
+    });
+  }
+
+  // ── Persist chapter memory ────────────────────────────────────────────────
+  const memory: ChapterMemory = {
+    chapterNumber: chapter.chapter,
+    summary: chapter.summary,
+    microSummaries: allMicroSummaries,
+    continuityDelta: allContinuityDeltas,
+  };
+  await saveChapterMemory(memory);
+
+  progress('Chapter complete.');
+  return finalContent;
 };
