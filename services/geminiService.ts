@@ -1,6 +1,18 @@
 /// <reference types="vite/client" />
 import { GoogleGenAI, GenerateContentResponse, Type } from "@google/genai";
 import { BookOutline, MarketReport, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AuthorProfile, Chapter } from '../types';
+import {
+  compactText,
+  truncateToTokenBudget,
+  excerptContext,
+  compactMarketContext,
+  recordTokenUsage,
+  cachedCall,
+  genreCache,
+  topicCache,
+  marketReportCache,
+  shortCache,
+} from './tokenOptimizer';
 
 
 let aiInstance: GoogleGenAI | null = null;
@@ -28,55 +40,66 @@ async function callWithRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> {
 }
 
 export const getHotGenres = async (): Promise<GenreSuggestion[]> => {
-  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: 'Identify 5 currently trending book genres for self-publishing.',
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            genre: { type: Type.STRING },
-            reasoning: { type: Type.STRING }
-          },
-          required: ['genre', 'reasoning']
+  const PROMPT = 'Identify 5 currently trending book genres for self-publishing.';
+  recordTokenUsage('getHotGenres', PROMPT);
+  const raw = await cachedCall(genreCache, PROMPT, async () => {
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: PROMPT,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              genre: { type: Type.STRING },
+              reasoning: { type: Type.STRING }
+            },
+            required: ['genre', 'reasoning']
+          }
         }
       }
-    }
-  }));
-  return JSON.parse(response.text || '[]');
+    }));
+    return response.text || '[]';
+  });
+  return JSON.parse(raw);
 };
 
 export const getTopicSuggestions = async (genre: string, reasoning: string): Promise<TopicSuggestion[]> => {
-  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `Suggest 5 marketable book topics for the genre "${genre}". Context: ${reasoning}`,
-    config: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            topic: { type: Type.STRING },
-            reasoning: { type: Type.STRING }
-          },
-          required: ['topic', 'reasoning']
+  const PROMPT = compactText(`Suggest 5 marketable book topics for the genre "${genre}". Context: ${truncateToTokenBudget(reasoning, 80)}`);
+  recordTokenUsage('getTopicSuggestions', PROMPT);
+  const raw = await cachedCall(topicCache, PROMPT, async () => {
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: PROMPT,
+      config: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              topic: { type: Type.STRING },
+              reasoning: { type: Type.STRING }
+            },
+            required: ['topic', 'reasoning']
+          }
         }
       }
-    }
-  }));
-  return JSON.parse(response.text || '[]');
+    }));
+    return response.text || '[]';
+  });
+  return JSON.parse(raw);
 };
 
 export const generateMarketReport = async (topic: string, genre?: string): Promise<MarketReport> => {
-  const prompt = `Generate a comprehensive market report for a book about "${topic}"${genre ? ` in the genre "${genre}"` : ''}. Include trend analysis, target audience (demographics, interests, painPoints), high-value keywords, suggested book types (type, reasoning), and competitor analysis (title, successFactor). Also simulate google trends data.`;
-  
-  const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
+  const PROMPT = compactText(`Generate a comprehensive market report for a book about "${topic}"${genre ? ` in the genre "${genre}"` : ''}. Include trend analysis, target audience (demographics, interests, painPoints), high-value keywords, suggested book types (type, reasoning), and competitor analysis (title, successFactor). Also simulate google trends data.`);
+  recordTokenUsage('generateMarketReport', PROMPT);
+  const raw = await cachedCall(marketReportCache, PROMPT, async () => {
+    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: PROMPT,
     config: {
       responseMimeType: 'application/json',
       responseSchema: {
@@ -141,17 +164,19 @@ export const generateMarketReport = async (topic: string, genre?: string): Promi
       }
     }
   }));
-  return JSON.parse(response.text || '{}');
+    return response.text || '{}';
+  });
+  return JSON.parse(raw);
 };
 
 export const generateBookOutline = async (marketReport: MarketReport, bookType: string, numChapters: number, pageRange: string): Promise<BookOutline> => {
-    const prompt = `Create a detailed book outline for a "${bookType}" book.
-    Market Report Summary: ${marketReport.trendAnalysis}
-    Target Audience: ${marketReport.targetAudience.demographics}
+    const marketCtx = compactMarketContext(marketReport);
+    const prompt = compactText(`Create a detailed book outline for a "${bookType}" book.
+    Market Context: ${marketCtx}
     Number of Chapters: ${numChapters}
     Target Length: ${pageRange}
-    
-    Return a JSON object with title, subtitle, and tableOfContents (chapter number, title, summary).`;
+    Return a JSON object with title, subtitle, and tableOfContents (chapter number, title, summary).`);
+    recordTokenUsage('generateBookOutline', prompt);
 
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -182,7 +207,9 @@ export const generateBookOutline = async (marketReport: MarketReport, bookType: 
 };
 
 export const regenerateBookTitle = async (marketReport: MarketReport): Promise<{ title: string; subtitle: string }> => {
-  const prompt = `Generate a catchy, bestselling title and subtitle for a book based on this market trend: ${marketReport.trendAnalysis}. Target Audience: ${marketReport.targetAudience.demographics}. Keywords: ${marketReport.keywords.join(', ')}.`;
+  const marketCtx = compactMarketContext(marketReport);
+  const prompt = compactText(`Generate a catchy, bestselling title and subtitle for a book. ${marketCtx}`);
+  recordTokenUsage('regenerateBookTitle', prompt);
   
   const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
     model: 'gemini-2.5-flash',
@@ -202,12 +229,13 @@ export const regenerateBookTitle = async (marketReport: MarketReport): Promise<{
 };
 
 export const generateChapterContent = async (chapterTitle: string, chapterSummary: string, lengthGuidance: string): Promise<string> => {
-  const prompt = `Write the full content for the chapter "${chapterTitle}".
-  Summary: ${chapterSummary}
+  const prompt = compactText(`Write the full content for the chapter "${chapterTitle}".
+  Summary: ${truncateToTokenBudget(chapterSummary, 150)}
   Target Length: ${lengthGuidance}
   Style: Engaging, well-structured, suitable for the genre.
   Format: Markdown.
-  Do not include the chapter title at the start.`;
+  Do not include the chapter title at the start.`);
+  recordTokenUsage('generateChapterContent', prompt);
 
   const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
     model: 'gemini-2.5-flash',
@@ -217,15 +245,18 @@ export const generateChapterContent = async (chapterTitle: string, chapterSummar
 };
 
 export const regenerateChapterWithGuidance = async (chapterTitle: string, chapterSummary: string, currentContent: string, lengthGuidance: string, instructions?: string): Promise<string> => {
-    const prompt = `Rewrite the chapter "${chapterTitle}".
-    Summary: ${chapterSummary}
-    Current Draft:
+    // Excerpt the current draft to avoid sending huge content back verbatim
+    const draftExcerpt = excerptContext(currentContent, 400, 200, 200);
+    const prompt = compactText(`Rewrite the chapter "${chapterTitle}".
+    Summary: ${truncateToTokenBudget(chapterSummary, 100)}
+    Current Draft (excerpted):
     ---
-    ${currentContent}
+    ${draftExcerpt}
     ---
-    Instructions: ${instructions || 'Improve flow, clarity, and engagement. Maintain the core message.'}
+    Instructions: ${truncateToTokenBudget(instructions || 'Improve flow, clarity, and engagement. Maintain the core message.', 80)}
     Target Length: ${lengthGuidance}
-    Format: Markdown.`;
+    Format: Markdown.`);
+    recordTokenUsage('regenerateChapterWithGuidance', prompt);
 
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -235,9 +266,11 @@ export const regenerateChapterWithGuidance = async (chapterTitle: string, chapte
 };
 
 export const generateImagePrompt = async (chapterExcerpt: string, style?: string): Promise<string> => {
-    const prompt = `Create a detailed image generation prompt for an illustration based on this excerpt: "${chapterExcerpt.substring(0, 300)}...".
+    const excerpt = truncateToTokenBudget(chapterExcerpt, 80);
+    const prompt = compactText(`Create a detailed image generation prompt for an illustration based on this excerpt: "${excerpt}".
     Style: ${style || 'Cinematic, high quality, detailed'}.
-    The prompt should be descriptive and suitable for an AI image generator.`;
+    The prompt should be descriptive and suitable for an AI image generator.`);
+    recordTokenUsage('generateImagePrompt', prompt);
 
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -302,9 +335,13 @@ export const generateStockPhotoSuggestions = async (query: string): Promise<{pro
 };
 
 export const humanizeChapterContent = async (content: string): Promise<string> => {
-    const prompt = `Rewrite the following text to sound more natural, human, and engaging. Remove robotic phrasing and repetitive structures.
+    // Use excerptContext to avoid sending the full chapter; humanize the most
+    // representative portions rather than truncating to an arbitrary head slice.
+    const excerpt = excerptContext(content, 500, 250, 250);
+    const prompt = compactText(`Rewrite the following text to sound more natural, human, and engaging. Remove robotic phrasing and repetitive structures.
     Text:
-    ${content.substring(0, 5000)}... (truncated for length)`;
+    ${excerpt}`);
+    recordTokenUsage('humanizeChapterContent', prompt);
     
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -314,12 +351,12 @@ export const humanizeChapterContent = async (content: string): Promise<string> =
 };
 
 export const generateKdpMarketingInfo = async (marketReport: MarketReport, outline: BookOutline): Promise<KdpMarketingInfo> => {
-    const prompt = `Generate Amazon KDP marketing metadata for the book "${outline.title}".
+    const marketCtx = compactMarketContext(marketReport);
+    const prompt = compactText(`Generate Amazon KDP marketing metadata for the book "${outline.title}".
     Subtitle: ${outline.subtitle}
-    Market Context: ${marketReport.trendAnalysis}
-    Keywords: ${marketReport.keywords.join(', ')}
-    
-    Return JSON with shortDescription, longDescription (HTML format with b, i, ul, li tags), categories (array of 3 strings), keywords (array of 7 strings), and backCoverBlurb.`;
+    Market Context: ${marketCtx}
+    Return JSON with shortDescription, longDescription (HTML format with b, i, ul, li tags), categories (array of 3 strings), keywords (array of 7 strings), and backCoverBlurb.`);
+    recordTokenUsage('generateKdpMarketingInfo', prompt);
 
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -342,9 +379,10 @@ export const generateKdpMarketingInfo = async (marketReport: MarketReport, outli
 };
 
 export const personalizeAuthorBio = async (currentBio: string, bookTopic: string): Promise<string> => {
-    const prompt = `Rewrite this author bio to highlight expertise relevant to the book topic: "${bookTopic}".
-    Current Bio: ${currentBio}
-    Keep it professional but engaging.`;
+    const prompt = compactText(`Rewrite this author bio to highlight expertise relevant to the book topic: "${bookTopic}".
+    Current Bio: ${truncateToTokenBudget(currentBio, 200)}
+    Keep it professional but engaging.`);
+    recordTokenUsage('personalizeAuthorBio', prompt);
     
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -354,8 +392,10 @@ export const personalizeAuthorBio = async (currentBio: string, bookTopic: string
 };
 
 export const generateQuickEnding = async (title: string, subtitle: string, lastChapterContent: string): Promise<string> => {
-     const prompt = `Write a satisfying conclusion/ending paragraph for the book "${title}: ${subtitle}".
-     Context (Last Chapter): ${lastChapterContent.substring(0, 1000)}...`;
+     const context = truncateToTokenBudget(lastChapterContent, 250);
+     const prompt = compactText(`Write a satisfying conclusion/ending paragraph for the book "${title}: ${subtitle}".
+     Context (Last Chapter): ${context}`);
+     recordTokenUsage('generateQuickEnding', prompt);
      
      const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -365,13 +405,13 @@ export const generateQuickEnding = async (title: string, subtitle: string, lastC
 };
 
 export const reimagineAuthorPersona = async (currentProfile: AuthorProfile, bookTitle: string, bookSubtitle: string, genre: string, marketReport: MarketReport | null): Promise<AuthorProfile> => {
-    const prompt = `Create a persona for an author who would write the book "${bookTitle}: ${bookSubtitle}" in the genre "${genre}".
-    Market Context: ${marketReport?.trendAnalysis || 'N/A'}.
-    
+    const marketCtx = marketReport ? compactMarketContext(marketReport) : 'N/A';
+    const prompt = compactText(`Create a persona for an author who would write the book "${bookTitle}: ${bookSubtitle}" in the genre "${genre}".
+    Market Context: ${marketCtx}
     Generate a name, bio, expertise, and suggested social media handles.
     Also generate 3 fictional critic reviews.
-    
-    Return JSON matching the AuthorProfile structure (excluding photos/marketing).`;
+    Return JSON matching the AuthorProfile structure (excluding photos/marketing).`);
+    recordTokenUsage('reimagineAuthorPersona', prompt);
     
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -423,11 +463,12 @@ export const reimagineAuthorPersona = async (currentProfile: AuthorProfile, book
 };
 
 export const generateBatchTitles = async (genre: string, count: number): Promise<{ title: string; subtitle: string }[]> => {
-    const prompt = `Generate ${count} unique, marketable book title and subtitle pairs for the genre "${genre}". Return JSON array.`;
-    
-    const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
+    const PROMPT = compactText(`Generate ${count} unique, marketable book title and subtitle pairs for the genre "${genre}". Return JSON array.`);
+    recordTokenUsage('generateBatchTitles', PROMPT);
+    const raw = await cachedCall(shortCache, `batchTitles:${genre}:${count}`, async () => {
+        const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: PROMPT,
         config: {
             responseMimeType: 'application/json',
             responseSchema: {
@@ -442,15 +483,23 @@ export const generateBatchTitles = async (genre: string, count: number): Promise
             }
         }
     }));
-    return JSON.parse(response.text || '[]');
+        return response.text || '[]';
+    });
+    return JSON.parse(raw);
 };
 
 export const regenerateFullBookWithFeedback = async (currentOutline: BookOutline, feedback: string): Promise<BookOutline> => {
-     const prompt = `Regenerate the book outline and summaries based on this feedback: "${feedback}".
+     // Compact the outline to just chapter indices + titles + brief summaries
+     const outlineCompact = currentOutline.tableOfContents.map(c => ({
+         ch: c.chapter,
+         title: c.title,
+         summary: truncateToTokenBudget(c.summary, 50),
+     }));
+     const prompt = compactText(`Regenerate the book outline and summaries based on this feedback: "${truncateToTokenBudget(feedback, 150)}".
      Current Title: ${currentOutline.title}
-     Current Outline: ${JSON.stringify(currentOutline.tableOfContents.map(c => ({ ch: c.chapter, title: c.title, summary: c.summary })))}
-     
-     Return updated JSON with title, subtitle, and tableOfContents (empty content).`;
+     Current Outline: ${JSON.stringify(outlineCompact)}
+     Return updated JSON with title, subtitle, and tableOfContents (empty content).`);
+     recordTokenUsage('regenerateFullBookWithFeedback', prompt);
      
      const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
@@ -491,11 +540,13 @@ export const regenerateFullBookWithFeedback = async (currentOutline: BookOutline
 
 
 export const generateLiteraryCritique = async (chapterTitle: string, chapterContent: string, bookOutline: BookOutline): Promise<string> => {
-    const prompt = `
-    You are the **Grand Master Scholar and Literary Critic**. 
-    You possess an infinite understanding of narrative structure, emotional resonance, and character psychology. 
+    // Use excerptContext to avoid sending huge chapters verbatim to the more
+    // expensive 'gemini-3-pro-preview' model.  Head/tail/middle sampling
+    // preserves the global narrative arc while keeping the token count low.
+    const excerpt = excerptContext(chapterContent, 500, 300, 200);
+    const prompt = compactText(`You are the **Grand Master Scholar and Literary Critic**.
+    You possess an infinite understanding of narrative structure, emotional resonance, and character psychology.
     Your mission is to read the provided chapter with deep empathy, imagining yourself living the story alongside the characters.
-    You must feel their pain, their joy, and their conflicts.
 
     **Book Context:**
     Title: ${bookOutline.title}
@@ -503,22 +554,22 @@ export const generateLiteraryCritique = async (chapterTitle: string, chapterCont
 
     **Chapter to Review:**
     Title: "${chapterTitle}"
-    Content:
+    Content (representative excerpt):
     ---
-    ${chapterContent}
+    ${excerpt}
     ---
 
     **Your Task:**
-    Provide a constructive, expert critique of this chapter. 
-    1.  **Emotional Connection:** Do the characters feel real? Is their emotional journey impactful?
-    2.  **Pacing & Flow:** Does the narrative move at the right speed? Are there boring parts or rushed parts?
-    3.  **Digital Medium Awareness:** Ensure the writing style fits an e-book format (engaging, scrollable, no "page turning" references).
-    4.  **Specific Suggestions:** Provide 3-4 concrete, actionable improvements.
+    Provide a constructive, expert critique of this chapter.
+    1. **Emotional Connection:** Do the characters feel real? Is their emotional journey impactful?
+    2. **Pacing & Flow:** Does the narrative move at the right speed? Are there boring or rushed parts?
+    3. **Digital Medium Awareness:** Ensure the writing style fits an e-book format (engaging, scrollable, no "page turning" references).
+    4. **Specific Suggestions:** Provide 3-4 concrete, actionable improvements.
 
     **Output Format:**
-    Return a structured critique in Markdown. Be encouraging but rigorously honest. 
-    Start with a brief "Scholar's Impression" summary, followed by bullet points of "Critical Analysis", and end with "Actionable Improvements".
-    `;
+    Return a structured critique in Markdown. Be encouraging but rigorously honest.
+    Start with a brief "Scholar's Impression" summary, followed by bullet points of "Critical Analysis", and end with "Actionable Improvements".`);
+    recordTokenUsage('generateLiteraryCritique', prompt);
 
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-3-pro-preview',
@@ -529,29 +580,33 @@ export const generateLiteraryCritique = async (chapterTitle: string, chapterCont
 };
 
 export const applyLiteraryCritique = async (chapterTitle: string, currentContent: string, critique: string): Promise<string> => {
-    const prompt = `
-    You are the **Grand Master Editor**.
+    // Excerpt the content; the model rewrites from the critique instructions,
+    // so sending a representative sample is sufficient to preserve style/voice.
+    const excerpt = excerptContext(currentContent, 600, 300, 200);
+    // The critique itself is structured markdown and should stay complete
+    const critiqueCompact = truncateToTokenBudget(critique, 500);
+    const prompt = compactText(`You are the **Grand Master Editor**.
     You have received a specific critique from the Grand Master Scholar.
     Your task is to rewrite the chapter to incorporate these improvements **automatically**.
 
     **Chapter Title:** "${chapterTitle}"
-    
-    **Original Content:**
+
+    **Original Content (representative excerpt):**
     ---
-    ${currentContent}
+    ${excerpt}
     ---
 
     **Scholar's Critique & Instructions:**
     ---
-    ${critique}
+    ${critiqueCompact}
     ---
 
     **Instructions:**
-    1.  **Apply the Improvements:** Rewrite the content to address the points raised in the critique (improve emotional resonance, fix pacing, etc.).
-    2.  **Preserve Core Plot:** Do not change the fundamental events of the chapter unless the critique explicitly asks to fix a plot hole.
-    3.  **Digital Medium Awareness:** Ensure no references to physical pages/books remain.
-    4.  **Output ONLY the Content:** Return the full, rewritten chapter text in Markdown. No preambles.
-    `;
+    1. **Apply the Improvements:** Rewrite the content to address the points raised in the critique.
+    2. **Preserve Core Plot:** Do not change the fundamental events unless the critique asks to fix a plot hole.
+    3. **Digital Medium Awareness:** Ensure no references to physical pages/books remain.
+    4. **Output ONLY the Content:** Return the full, rewritten chapter text in Markdown. No preambles.`);
+    recordTokenUsage('applyLiteraryCritique', prompt);
 
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-3-pro-preview',
@@ -566,26 +621,26 @@ export const applyLiteraryCritique = async (chapterTitle: string, currentContent
 };
 
 export const quickEnhanceAuthorProfile = async (currentProfile: AuthorProfile): Promise<Partial<AuthorProfile>> => {
-    const prompt = `
-    You are the **Grand Master Ebook Marketing Genius, SEO Expert, and Advertising Agent**.
+    const bioInput = truncateToTokenBudget(currentProfile.bio, 150);
+    const expertiseInput = truncateToTokenBudget(currentProfile.expertise, 100);
+    const prompt = compactText(`You are the **Grand Master Ebook Marketing Genius, SEO Expert, and Advertising Agent**.
     You possess god-like skills in boosting the ranking and sales of new ebooks.
-    
+
     **Your Mission:**
     Rewrite and expand the author's "Bio" and "Book-Specific Expertise" to be incredibly professional, engaging, and SEO-optimized.
-    You must take the user's rough input and transform it into a masterpiece that readers will love.
-    
+
     **Inputs:**
-    Current Bio Draft: "${currentProfile.bio}"
-    Current Expertise Draft: "${currentProfile.expertise}"
-    
+    Current Bio Draft: "${bioInput}"
+    Current Expertise Draft: "${expertiseInput}"
+
     **Strict Rules & Constraints:**
-    1.  **Grand Master SEO:** Use keywords naturally to boost authority and discoverability.
-    2.  **Expand & Enhance:** If the input is short, expand it into a full, compelling narrative. Ask rhetorical questions about their life (implied) and answer them in the text.
-    3.  **Topic Integration:** Ensure the core subject/idea the user is writing about is central to the bio.
-    4.  **No Taboos:** Avoid controversial, polarizing, or widely disliked topics/attitudes. Keep it universally appealing.
-    5.  **IGNORE CONTACT INFO:** Do NOT generate, modify, or even mention specific contact details like email addresses, phone numbers, or social media handles in the text. The user has separate fields for those.
-    6.  **Output Format:** Return a JSON object with strictly two fields: "bio" and "expertise".
-    `;
+    1. **Grand Master SEO:** Use keywords naturally to boost authority and discoverability.
+    2. **Expand & Enhance:** If the input is short, expand it into a full, compelling narrative.
+    3. **Topic Integration:** Ensure the core subject/idea the user is writing about is central to the bio.
+    4. **No Taboos:** Avoid controversial or polarizing topics. Keep it universally appealing.
+    5. **IGNORE CONTACT INFO:** Do NOT generate, modify, or mention specific contact details like email addresses, phone numbers, or social media handles.
+    6. **Output Format:** Return a JSON object with strictly two fields: "bio" and "expertise".`);
+    recordTokenUsage('quickEnhanceAuthorProfile', prompt);
 
     const response = await callWithRetry<GenerateContentResponse>(() => getAi().models.generateContent({
         model: 'gemini-2.5-flash',
