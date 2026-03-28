@@ -1,9 +1,12 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload } from './types';
+import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload, GenerationSettings } from './types';
 import * as geminiService from './services/geminiService';
 import * as realMarketService from './services/realMarketService';
 import * as storageService from './services/storageService';
+import { generateChapterChunked, hashOutline, DEFAULT_GENERATION_SETTINGS } from './services/sceneChunkedGenerator';
+import { loadProjectMemory, updateProjectMemory, extractChapterMemory } from './services/memoryService';
+import { extractAndStoreLore } from './services/loreEngine';
 
 import StepIndicator from './components/shared/StepIndicator';
 import MarketResearchStep from './components/steps/MarketResearchStep';
@@ -18,7 +21,8 @@ import AuthorProfileModal from './components/AuthorProfileModal';
 import BatchMode from './components/BatchMode';
 import KdpAutomationBot from './components/KdpAutomationBot';
 import TitleBar from './components/TitleBar';
-
+import GenerationSettingsPanel from './components/GenerationSettingsPanel';
+import TokenTelemetryDashboard from './components/TokenTelemetryDashboard';
 
 import { useAutoSave } from './hooks/useAutoSave';
 import AutoSaveIndicator from './components/shared/AutoSaveIndicator';
@@ -75,6 +79,11 @@ function App() {
   const [batchProjects, setBatchProjects] = useState<BatchProject[]>([]);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
 
+  // GENERATION SETTINGS & PROJECT IDENTITY
+  const [generationSettings, setGenerationSettings] = useState<GenerationSettings>(DEFAULT_GENERATION_SETTINGS);
+  const [projectId, setProjectId] = useState<string>(() => `proj_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  const [showGenerationSettings, setShowGenerationSettings] = useState(false);
+
   // --- AUTO SAVE ---
   const { lastSaved, isSaving: isAutoSaving } = useAutoSave({
       mode,
@@ -129,6 +138,13 @@ function App() {
                 setSelectedGenre(savedState.selectedGenre ?? null);
                 setAuthorProfile(savedState.authorProfile ?? null);
                 setKdpMarketingInfo(savedState.kdpMarketingInfo ?? null);
+                // Load generation settings with safe migration
+                if (savedState.generationSettings) {
+                    setGenerationSettings({ ...DEFAULT_GENERATION_SETTINGS, ...savedState.generationSettings });
+                }
+                if (savedState.projectId) {
+                    setProjectId(savedState.projectId);
+                }
             }
         } catch (e) {
             console.error("Failed to load state from DB", e);
@@ -180,6 +196,8 @@ function App() {
           selectedGenre,
           authorProfile,
           kdpMarketingInfo,
+          generationSettings,
+          projectId,
         };
         storageService.saveState(STORAGE_KEY, stateToSave).catch(e => console.error("Save failed", e));
         
@@ -191,7 +209,7 @@ function App() {
     return () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     }
-  }, [mode, currentStep, marketReport, hasViewedReport, bookOutline, pagesPerChapter, bookCoverUrl, genreSuggestions, topicSuggestions, selectedGenre, authorProfile, kdpMarketingInfo, isLoading]);
+  }, [mode, currentStep, marketReport, hasViewedReport, bookOutline, pagesPerChapter, bookCoverUrl, genreSuggestions, topicSuggestions, selectedGenre, authorProfile, kdpMarketingInfo, generationSettings, projectId, isLoading]);
 
   const handleRequestPersistence = async () => {
       const granted = await storageService.requestPersistentStorage();
@@ -234,6 +252,9 @@ function App() {
         setSelectedGenre(null);
         setCurrentStep(AppStep.MarketResearch);
         setError(null);
+        // New project seed
+        setProjectId(`proj_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+        setGenerationSettings(s => ({ ...DEFAULT_GENERATION_SETTINGS, projectSeed: `seed_${Date.now()}` }));
         
         startAction();
     };
@@ -246,6 +267,17 @@ function App() {
         startNew();
     }
   };
+
+  // ─── Generation settings handlers ──────────────────────────────────────────
+  const handleRerollChapterScenes = useCallback((chapterNumber: number) => {
+    setGenerationSettings(prev => ({
+      ...prev,
+      rerollNonces: {
+        ...prev.rerollNonces,
+        [chapterNumber]: (prev.rerollNonces[chapterNumber] ?? 0) + 1,
+      },
+    }));
+  }, []);
 
   // --- API WRAPPERS ---
 
@@ -349,15 +381,39 @@ function App() {
     setError(null);
 
     try {
-        let content;
+        let content: string;
+
         if (currentContent && currentContent.trim().length > 0) {
+            // Rewrite with guidance — always single-pass
             content = await geminiService.regenerateChapterWithGuidance(
-                chapter.title, 
-                chapter.summary, 
-                currentContent, 
+                chapter.title,
+                chapter.summary,
+                currentContent,
                 pagesPerChapter,
                 instructions
             );
+        } else if (generationSettings.strategy === 'chunked') {
+            // Scene-chunked generation
+            const outlineHash = hashOutline(bookOutline.tableOfContents.map(c => c.title));
+            const memory = await loadProjectMemory(projectId);
+            content = await generateChapterChunked(
+                chapter.chapter,
+                chapter.title,
+                chapter.summary,
+                pagesPerChapter,
+                generationSettings,
+                memory,
+                projectId,
+                outlineHash,
+                (progress) => {
+                    setFullManuscriptGenerationProgress(progress.message);
+                },
+            );
+            // Background: extract memory + lore (non-blocking)
+            extractChapterMemory(chapter.chapter, chapter.title, content)
+                .then(mem => updateProjectMemory(projectId, mem))
+                .catch(() => {});
+            extractAndStoreLore(projectId, chapter.chapter, content).catch(() => {});
         } else {
             content = await geminiService.generateChapterContent(chapter.title, chapter.summary, pagesPerChapter);
         }
@@ -373,8 +429,9 @@ function App() {
         setError(`Failed to generate content for Chapter ${chapter.chapter}.`);
     } finally {
         setChapterLoadingStates(prev => ({...prev, [chapter.chapter]: false}));
+        setFullManuscriptGenerationProgress('');
     }
-  }, [bookOutline, pagesPerChapter]);
+  }, [bookOutline, pagesPerChapter, generationSettings, projectId]);
 
   const handleUpdateChapterContent = useCallback((chapterIndex: number, content: string) => {
     setBookOutline(prev => {
@@ -887,19 +944,39 @@ function App() {
                   isRegeneratingTitle={isRegeneratingTitle}
                 />;
       case AppStep.Content:
-        return <ContentGenerationStep 
-                  outline={bookOutline} 
-                  onGenerateChapter={handleGenerateChapter} 
-                  updateChapterContent={handleUpdateChapterContent} 
-                  chapterLoadingStates={chapterLoadingStates}
-                  onGenerateImagePrompt={handleGenerateImagePrompt}
-                  onUpdateImagePrompt={handleUpdateImagePrompt}
-                  onGenerateIllustration={handleGenerateIllustrationFromContentStep}
-                  onGenerateFullManuscript={handleGenerateFullManuscript}
-                  isGeneratingFullManuscript={isGeneratingFullManuscript}
-                  fullManuscriptGenerationProgress={fullManuscriptGenerationProgress}
-                  onUpdateChapterStyle={handleUpdateChapterStyle}
-               />;
+        return (
+          <div className="space-y-4">
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowGenerationSettings(v => !v)}
+                className="text-xs text-slate-400 hover:text-violet-400 transition-colors flex items-center gap-1"
+              >
+                ⚙️ {showGenerationSettings ? 'Hide' : 'Show'} Generation Settings
+              </button>
+            </div>
+            {showGenerationSettings && (
+              <GenerationSettingsPanel
+                settings={generationSettings}
+                onChange={setGenerationSettings}
+                onRerollChapter={handleRerollChapterScenes}
+                chapterNumbers={bookOutline?.tableOfContents.map(c => c.chapter) ?? []}
+              />
+            )}
+            <ContentGenerationStep
+                outline={bookOutline}
+                onGenerateChapter={handleGenerateChapter}
+                updateChapterContent={handleUpdateChapterContent}
+                chapterLoadingStates={chapterLoadingStates}
+                onGenerateImagePrompt={handleGenerateImagePrompt}
+                onUpdateImagePrompt={handleUpdateImagePrompt}
+                onGenerateIllustration={handleGenerateIllustrationFromContentStep}
+                onGenerateFullManuscript={handleGenerateFullManuscript}
+                isGeneratingFullManuscript={isGeneratingFullManuscript}
+                fullManuscriptGenerationProgress={fullManuscriptGenerationProgress}
+                onUpdateChapterStyle={handleUpdateChapterStyle}
+            />
+          </div>
+        );
       case AppStep.Illustration:
         return <IllustrationStep chapters={bookOutline?.tableOfContents || []} onGenerateImage={handleGenerateImageForIllustrationStep} />;
       case AppStep.Review:
@@ -1032,7 +1109,12 @@ function App() {
 
 
       {/* System Resource Footer Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 p-2 flex justify-between items-center text-xs text-slate-500 z-40 px-6">
+      <div className="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 z-40 px-6">
+        {/* Token telemetry (collapsible) */}
+        <div className="py-1">
+          <TokenTelemetryDashboard projectId={projectId} />
+        </div>
+        <div className="pb-2 flex justify-between items-center text-xs text-slate-500">
         <div className="flex items-center gap-4">
              <div className="flex items-center gap-1">
                  <span className={isPersistentStorage ? "text-emerald-500" : "text-amber-500"}>●</span>
@@ -1061,8 +1143,9 @@ function App() {
                      {isHighPerformanceMode ? "High Concurrency" : "Sequential"}
                  </button>
              </div>
-             <span>App v1.5.0</span>
+         <span>App v2.0.0</span>
         </div>
+      </div>
       </div>
     </div>
   );
