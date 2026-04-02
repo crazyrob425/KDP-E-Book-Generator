@@ -74,6 +74,19 @@ Don't write blindly. The app analyzes trends before you type a single word.
 
 ---
 
+## 🖥️ Window State Persistence (Desktop / Tauri)
+
+When running as a desktop app (Tauri wrapper), the application automatically saves and restores your window size, position, and maximized state between sessions.
+
+*   **Storage location:** A `window-state.json` file inside the application's AppData directory (e.g. `%AppData%\<app-identifier>\` on Windows).
+*   **Monitor awareness:** On next launch the window reopens on the same monitor if it is still connected; otherwise it falls back to a monitor containing the saved top-left corner, then to the primary monitor.
+*   **Shrink-to-fit:** If the saved size is larger than the target monitor, the window is shrunk to fit.
+*   **16 px margin:** When clamping or shrinking, a 16 px inset is kept from every edge of the monitor work area so the window is never flush against the screen border.
+*   **Minimum size:** The window is never restored smaller than 400 × 300 px.
+*   **Maximized state:** If the app was closed while maximized it reopens maximized, while the normal (restored) rectangle is still preserved for when you un-maximize.
+
+---
+
 ## 🛠️ Technical Stack
 
 *   **Frontend:** React 18, TypeScript, Tailwind CSS
