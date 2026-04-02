@@ -138,7 +138,6 @@ export type BotUpdate =
   | { type: 'progress'; progress: number }
   | { type: 'captcha'; imageUrl?: string }
   | { type: 'success' }
-  | { type: 'success' }
   | { type: 'error'; message: string };
 
 export interface ElectronAPI {

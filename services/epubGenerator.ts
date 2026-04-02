@@ -17,7 +17,8 @@ const markdownToEpubHtml = (markdown: string): string => {
     if (!markdown) return '<p></p>';
     try {
         const raw = marked.parse(markdown) as string;
-        // He.decode ensures we don't double-encode entities that marked may have left in
+        // he.decode converts any HTML entities in marked's output back to plain characters
+        // so they are not double-encoded when the EPUB renderer re-encodes them.
         return he.decode(raw);
     } catch {
         // Fallback: wrap plain text in paragraphs
