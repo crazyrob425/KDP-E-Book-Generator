@@ -9,9 +9,18 @@ interface TitleBarProps {
 const TitleBar: React.FC<TitleBarProps> = ({ onSave, onLoad }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleMinimize = () => { try { window.electronAPI?.minimize(); } catch { /* no-op in browser */ } };
-  const handleMaximize = () => { try { window.electronAPI?.maximize(); } catch { /* no-op in browser */ } };
-  const handleClose = () => { try { window.electronAPI?.close(); } catch { /* no-op in browser */ } };
+  const handleMinimize = () => {
+    const promise = window.electronAPI?.minimize();
+    void promise?.catch(() => { /* no-op in browser */ });
+  };
+  const handleMaximize = () => {
+    const promise = window.electronAPI?.maximize();
+    void promise?.catch(() => { /* no-op in browser */ });
+  };
+  const handleClose = () => {
+    const promise = window.electronAPI?.close();
+    void promise?.catch(() => { /* no-op in browser */ });
+  };
 
   return (
     <div className="h-8 bg-slate-900 flex items-center justify-between select-none fixed top-0 left-0 right-0 z-[100] border-b border-slate-700">
