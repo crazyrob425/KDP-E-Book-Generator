@@ -8,8 +8,13 @@ import { KdpAutomationPayload, BotUpdate } from '../types';
 
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) {
-  app.quit();
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  if (require('electron-squirrel-startup')) {
+    app.quit();
+  }
+} catch {
+  // Package is absent outside packaged Windows installers — safe to ignore.
 }
 
 let mainWindow: BrowserWindow | null = null;

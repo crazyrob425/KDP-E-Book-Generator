@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { BotUpdate, GoogleTrendsData, KdpAutomationPayload } from '../types';
 
 type SaveResult = { success: boolean; filePath?: string; error?: string };
@@ -104,7 +103,7 @@ const tauriBridge: DesktopBridge = {
       filters: [{ name: 'JSON Files', extensions: ['json'] }],
     });
     if (!filePath) return { success: false };
-    await writeTextFile(filePath, data);
+    await invoke('write_file', { path: filePath, data });
     return { success: true, filePath };
   },
   loadFile: async () => {
@@ -115,7 +114,7 @@ const tauriBridge: DesktopBridge = {
       directory: false,
     });
     if (!filePath || Array.isArray(filePath)) return { success: false };
-    const data = await readTextFile(filePath);
+    const data = await invoke<string>('read_file', { path: filePath });
     return { success: true, data };
   },
 
