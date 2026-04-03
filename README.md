@@ -87,41 +87,100 @@ Don't write blindly. The app analyzes trends before you type a single word.
 
 ## 💾 Installation & Setup
 
-1.  **Clone the Repo**
-    ```bash
-    git clone https://github.com/yourusername/fraudrobs-book-factory.git
-    cd fraudrobs-book-factory
-    ```
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/crazyrob425/KDP-E-Book-Generator.git
+   cd KDP-E-Book-Generator
+   ```
 
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-3.  **Configure API Key**
-    Create a `.env` file in the root directory:
-    ```env
-    API_KEY=your_google_gemini_api_key_here
-    ```
+3. **Configure environment variables**
+   Create a `.env` file in the project root:
+   ```env
+   VITE_GOOGLE_API_KEY=your_google_gemini_api_key_here
+   KDP_EMAIL=your-kdp-email@example.com
+   KDP_PASSWORD=your-kdp-password
+   ```
+   Notes:
+   - `VITE_GOOGLE_API_KEY` is required for AI generation in the frontend.
+   - `KDP_EMAIL` and `KDP_PASSWORD` are required only for automation flows that run browser automation.
+   - Some code paths still support `API_KEY` fallback, but `VITE_GOOGLE_API_KEY` is the canonical setting.
 
-4.  **Run the App**
-    ```bash
-    npm start
-    ```
+4. **Run in development**
+   ```bash
+   npm run dev
+   ```
 
-### 🤖 Setting up the Automation Bot (Optional)
+5. **Build for production**
+   ```bash
+   npm run build
+   ```
 
-To use the KDP Auto-Uploader, you need to run the separate backend server.
+## 🖥️ Supported Runtime Modes
 
-1.  Navigate to `server/`
-2.  `npm install`
-3.  `npx playwright install`
-4.  Set KDP credentials (safe env vars):
-    ```bash
-    export KDP_EMAIL="your@email.com"
-    export KDP_PASSWORD="yourpassword"
-    ```
-5.  `npm start`
+### 1) Web UI mode
+- Run: `npm run dev`
+- Supports the core authoring workflow (research, outline, generation, review).
+- Electron-specific features (custom window controls, IPC-backed file dialogs, local automation worker bridge) are not guaranteed in plain browser mode.
+
+### 2) Electron desktop mode (primary automation path)
+- Frontend + Electron preload/main process integration.
+- KDP automation component currently uses Electron IPC as the active transport path.
+- Uses handlers defined in `electron/main.ts` and API exposed in `electron/preload.ts`.
+
+### 3) Standalone backend automation mode (optional)
+- `server/server.ts` provides a WebSocket backend path for automation workflows.
+- Treat this as an optional deployment mode for remote automation hosting scenarios.
+- See `server/README.md` for backend setup and deployment details.
+
+### 🤖 Automation Bot Setup (Optional)
+
+To run browser automation reliably:
+
+1. Install dependencies in the root project (`npm install`).
+2. Install Playwright browsers:
+   ```bash
+   npx playwright install
+   ```
+3. Set:
+   - `KDP_EMAIL`
+   - `KDP_PASSWORD`
+
+If using the standalone backend mode, follow `/server/README.md`.
+
+## ✅ Validation Commands
+
+- Frontend build:
+  ```bash
+  npm run build
+  ```
+- Server TypeScript check:
+  ```bash
+  npx tsc -p server/tsconfig.json --noEmit
+  ```
+
+## 🛠️ Troubleshooting
+
+- **`vite: not found`**
+  - Run `npm install` first, then rerun `npm run build` or `npm run dev`.
+
+- **Missing API key errors**
+  - Ensure `.env` contains `VITE_GOOGLE_API_KEY`.
+
+- **Playwright launch/automation failures**
+  - Run `npx playwright install`.
+  - Ensure `KDP_EMAIL` and `KDP_PASSWORD` are present in environment.
+
+- **IPC-only feature errors in browser mode**
+  - Features relying on `window.electronAPI` require Electron desktop runtime.
+
+- **Backend connectivity mismatch**
+  - Electron automation flow uses IPC.
+  - Standalone backend flow requires a running WebSocket backend on the expected URL/path.
 
 ---
 
