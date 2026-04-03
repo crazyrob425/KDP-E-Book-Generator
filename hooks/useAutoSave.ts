@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppStep, BookOutline, MarketReport, AuthorProfile, KdpMarketingInfo, GenreSuggestion, AppMode } from '../types';
+import desktopBridge from '../services/desktopBridge';
 
 interface AutoSaveState {
     mode: AppMode;
@@ -47,10 +48,10 @@ export const useAutoSave = (state: AutoSaveState, intervalMs: number = 120000) =
                 }, null, 2);
 
                 // Use the electron API to save
-                if (window.electronAPI?.saveFile) {
+                if (desktopBridge.saveFile) {
                     // We save to a specific autosave file, avoiding main project overwrite if possible users wants that distinction
                     // For now, saving as a distinct file is safer.
-                   await window.electronAPI.saveFile(payload, filename);
+                   await desktopBridge.saveFile(payload, filename);
                    setLastSaved(new Date());
                 }
             } catch (error) {

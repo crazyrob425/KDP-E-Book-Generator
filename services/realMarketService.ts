@@ -1,75 +1,54 @@
 import { MarketReport, GoogleTrendsData } from '../types';
 import { getAi } from './geminiService';
 import { GenerateContentResponse, Type } from "@google/genai";
-
-/** Returns true when running inside an Electron window with the full IPC bridge. */
-const hasElectron = (): boolean =>
-    typeof window !== 'undefined' &&
-    typeof (window as any).electronAPI !== 'undefined' &&
-    typeof (window as any).electronAPI.fetchGoogleTrends === 'function';
+import desktopBridge from './desktopBridge';
 
 export const generateRealMarketReport = async (topic: string, genre?: string): Promise<MarketReport> => {
     console.log(`Starting real market research for: ${topic}`);
 
-    // 1. Fetch Google Trends Data (Electron only – graceful fallback for web)
+    // 1. Fetch Google Trends Data
     let trendsData: GoogleTrendsData | null = null;
-    if (hasElectron()) {
-        try {
-            trendsData = await (window as any).electronAPI.fetchGoogleTrends(topic);
-        } catch (e) {
-            console.warn("Failed to fetch Google Trends:", e);
-        }
+    try {
+        trendsData = await desktopBridge.fetchGoogleTrends(topic);
+    } catch (e) {
+        console.warn("Failed to fetch Google Trends:", e);
     }
 
-    // 2. Fetch Amazon Competitors (Electron only)
+    // 2. Fetch Amazon Competitors
     let competitors: any[] = [];
-    if (hasElectron()) {
-        try {
-            competitors = await (window as any).electronAPI.fetchAmazonCompetitors(topic);
-        } catch (e) {
-            console.warn("Failed to fetch Amazon competitors:", e);
-        }
+    try {
+        competitors = await desktopBridge.fetchAmazonCompetitors(topic);
+    } catch (e) {
+        console.warn("Failed to fetch Amazon competitors:", e);
     }
 
-    // 3. Fetch Amazon Suggestions (Electron only)
+    // 3. Fetch Amazon Suggestions (for keywords)
     let suggestions: string[] = [];
-    if (hasElectron()) {
-        try {
-            suggestions = await (window as any).electronAPI.fetchAmazonSuggestions(topic);
-        } catch (e) {
-            console.warn("Failed to fetch Amazon suggestions:", e);
-        }
+    try {
+        suggestions = await desktopBridge.fetchAmazonSuggestions(topic);
+    } catch (e) {
+        console.warn("Failed to fetch Amazon suggestions:", e);
     }
 
-    // 4. Synthesize Report using Gemini (feeding it any real data we have)
-    const hasRealData = trendsData || competitors.length > 0 || suggestions.length > 0;
-
-    const prompt = hasRealData
-        ? `
+    // 4. Synthesize Report using Gemini (feeding it valid data)
+    const prompt = `
     Analyze the following REAL market data for the book topic "${topic}"${genre ? ` in genre "${genre}"` : ''}.
     
     **Google Trends Data:**
     ${trendsData ? JSON.stringify(trendsData.interestOverTime.slice(-12)) : "Not available"}
     
     **Top Amazon Competitors:**
-    ${competitors.map(c => `- ${c.title} by ${c.author} (Rating: ${c.rating}, Reviews: ${c.reviewCount})`).join('\n') || 'Not available'}
+    ${competitors.map(c => `- ${c.title} by ${c.author} (Rating: ${c.rating}, Reviews: ${c.reviewCount})`).join('\n')}
     
     **Amazon Search Suggestions (Keywords):**
-    ${suggestions.join(', ') || 'Not available'}
+    ${suggestions.join(', ')}
 
     Based on this REAL data, generate a comprehensive market report.
     - **Trend Analysis**: Interpret the trends data and competitor saturation.
     - **Target Audience**: Deduce from the competitor reviews and types.
-    - **Keywords**: Select the best ones from suggestions + additional relevant terms.
+    - **Keywords**: Select the best ones from suggestions + others.
     - **Competitor Analysis**: Summarize the success factors of the provided competitors.
     
-    Return JSON matching the MarketReport schema.
-    `
-        : `
-    Generate a comprehensive market report for a book about "${topic}"${genre ? ` in the genre "${genre}"` : ''}.
-    Include trend analysis, target audience (demographics, interests, painPoints), high-value keywords,
-    suggested book types (type, reasoning), and competitor analysis (title, successFactor).
-    Also simulate google trends data showing interest over the past 12 months.
     Return JSON matching the MarketReport schema.
     `;
 
@@ -111,31 +90,6 @@ export const generateRealMarketReport = async (topic: string, genre?: string): P
                                 successFactor: { type: Type.STRING }
                             }
                         }
-                    },
-                    googleTrends: {
-                        type: Type.OBJECT,
-                        properties: {
-                            interestOverTime: {
-                                type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        month: { type: Type.STRING },
-                                        value: { type: Type.NUMBER }
-                                    }
-                                }
-                            },
-                            relatedQueries: {
-                                type: Type.ARRAY,
-                                items: {
-                                    type: Type.OBJECT,
-                                    properties: {
-                                        query: { type: Type.STRING },
-                                        value: { type: Type.STRING }
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -144,10 +98,16 @@ export const generateRealMarketReport = async (topic: string, genre?: string): P
 
     const report: MarketReport = JSON.parse(response.text || '{}');
     
-    // Inject real trends data if available (overrides any simulated data the AI provided)
+    // Inject the REAL trends data back into the report object so the UI displays the real chart
     if (trendsData) {
         report.googleTrends = trendsData;
     }
+
+    // If we have real competitor data, we might want to ensure the report reflects it accurately.
+    // The AI might have summarized it, but let's double check. 
+    // Actually, passing it to the AI to "summarize success factors" is good.
+    // But maybe we want to augment the UI to show the raw book covers? 
+    // For now, we stick to the existing UI contract.
     
     return report;
 };

@@ -2,6 +2,12 @@
 
 This directory contains the Node.js backend service that powers the KDP Automation Bot. It uses Express, WebSockets, and Playwright to perform real, headless browser automation for publishing books to Amazon KDP.
 
+## Scope in Current Architecture
+
+- This backend is an **optional runtime mode**.
+- The frontend `KdpAutomationBot` component currently uses Electron IPC as the primary transport in desktop mode.
+- Use this backend when you want a standalone automation service (for example remote deployment with Cloud Run).
+
 ## Prerequisites
 
 1.  **Node.js:** (v18 or higher recommended)
@@ -17,7 +23,7 @@ Running the backend locally is essential for testing and development before depl
 Navigate to the `server/` directory and install the required npm packages.
 
 ```bash
-cd server
+cd /home/runner/work/KDP-E-Book-Generator/KDP-E-Book-Generator
 npm install
 ```
 
@@ -50,10 +56,18 @@ set KDP_PASSWORD="your-super-secret-password"
 Start the backend server. It will listen on `http://localhost:8080`.
 
 ```bash
-npm start
+cd /home/runner/work/KDP-E-Book-Generator/KDP-E-Book-Generator
+npx tsx server/server.ts
 ```
 
 You should see the output `Server is listening on port 8080`. The frontend application (when running) can now connect to `ws://localhost:8080`.
+
+### 5. Validate TypeScript (recommended)
+
+```bash
+cd /home/runner/work/KDP-E-Book-Generator/KDP-E-Book-Generator
+npx tsc -p server/tsconfig.json --noEmit
+```
 
 ## Deployment to Google Cloud Run
 
@@ -101,16 +115,9 @@ Your KDP credentials should not be part of the container. Use Cloud Run's suppor
     ```
 This securely mounts your secrets as environment variables inside the running container.
 
-### Step 4: Update Frontend WebSocket URL
+### Step 4: Wire Frontend to Backend Transport
 
 After deployment, Cloud Run will give you a service URL (e.g., `https://kdp-automation-backend-xxxxxxxx-uc.a.run.app`).
 
-You must update the `WEBSOCKET_URL` constant in `components/KdpAutomationBot.tsx` to point to this new address, using the secure WebSocket protocol (`wss://`).
-
-**From:**
-`const WEBSOCKET_URL = 'ws://localhost:8080';`
-
-**To:**
-`const WEBSOCKET_URL = 'wss://kdp-automation-backend-xxxxxxxx-uc.a.run.app';`
-
-After updating the frontend code, your application will be fully connected to your live, scalable, and secure backend on Google Cloud.
+If you are using a WebSocket-driven frontend mode, point your bot client to this address using `wss://`.
+If you are using Electron desktop mode, automation is currently IPC-driven and does not use a frontend `WEBSOCKET_URL` constant.

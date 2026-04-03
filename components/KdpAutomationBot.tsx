@@ -3,6 +3,7 @@ import { KdpAutomationPayload, BotStatus, BotUpdate } from '../types';
 import Button from './shared/Button';
 import { RobotIcon, TerminalIcon, ShieldCheckIcon, CheckCircleIcon } from './icons';
 import LoadingSpinner from './shared/LoadingSpinner';
+import desktopBridge from '../services/desktopBridge';
 
 interface KdpAutomationBotProps extends KdpAutomationPayload {
   onClose: () => void;
@@ -40,7 +41,7 @@ interface KdpAutomationBotProps extends KdpAutomationPayload {
                       epubBlob: epubBase64,
                   };
                   
-                  window.electronAPI.startAutomation(payload);
+                  await desktopBridge.startAutomation(payload);
               } catch (e) {
                   addLog(`Error preparing payload: ${(e as Error).message}`);
                   setStatus('error');
@@ -50,7 +51,7 @@ interface KdpAutomationBotProps extends KdpAutomationPayload {
           startBot();
   
           // Listen for updates
-          const removeListener = window.electronAPI.onAutomationUpdate((update) => {
+          const removeListener = desktopBridge.onAutomationUpdate((update) => {
                switch (update.type) {
                   case 'log':
                       addLog(update.message);
@@ -79,7 +80,7 @@ interface KdpAutomationBotProps extends KdpAutomationPayload {
   
           return () => {
               removeListener();
-              window.electronAPI.stopAutomation();
+              void desktopBridge.stopAutomation();
               addLog('Automation stopped.');
           };
       }, [props]);
@@ -97,7 +98,7 @@ interface KdpAutomationBotProps extends KdpAutomationPayload {
     const handleCaptchaSubmit = async () => {
       if (!captchaInput) return;
       addLog(`[USER] Submitted CAPTCHA solution: "${captchaInput}"`);
-      window.electronAPI.submitCaptcha(captchaInput);
+      void desktopBridge.submitCaptcha(captchaInput);
       setCaptchaImageUrl(null);
       setCaptchaInput('');
   };

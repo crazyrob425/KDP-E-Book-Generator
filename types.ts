@@ -162,7 +162,9 @@ export interface ElectronAPI {
 
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    electronAPI?: ElectronAPI;
+    __TAURI__?: unknown;
+    __TAURI_INTERNALS__?: unknown;
   }
 }
 

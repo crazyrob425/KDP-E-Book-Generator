@@ -18,6 +18,7 @@ import AuthorProfileModal from './components/AuthorProfileModal';
 import BatchMode from './components/BatchMode';
 import KdpAutomationBot from './components/KdpAutomationBot';
 import TitleBar from './components/TitleBar';
+import desktopBridge from './services/desktopBridge';
 
 
 import { useAutoSave } from './hooks/useAutoSave';
@@ -798,7 +799,7 @@ function App() {
     const fileName = bookOutline?.title ? `${bookOutline.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json` : 'kdp-project.json';
     
     try {
-        const result = await window.electronAPI.saveFile(JSON.stringify(projectState, null, 2), fileName);
+        const result = await desktopBridge.saveFile(JSON.stringify(projectState, null, 2), fileName);
         if (result.success) {
             alert(`Project saved successfully to: ${result.filePath}`);
         } else if (result.error) {
@@ -812,7 +813,7 @@ function App() {
 
   const handleLoadProject = async () => {
       try {
-          const result = await window.electronAPI.loadFile();
+          const result = await desktopBridge.loadFile();
           if (result.success && result.data) {
               const data = JSON.parse(result.data);
               
