@@ -16,6 +16,7 @@ const TitleBar: React.FC<TitleBarProps> = ({ onSave, onLoad }) => {
 
   return (
     <div className="h-8 bg-slate-900 flex items-center justify-between select-none fixed top-0 left-0 right-0 z-[100] border-b border-slate-700">
+      {/* Left cluster: app menu and draggable title area */}
       <div className="flex items-center h-full" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
         <button
           onClick={() => setMenuOpen((open) => !open)}

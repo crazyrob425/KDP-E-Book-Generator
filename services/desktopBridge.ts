@@ -91,7 +91,9 @@ const tauriBridge: DesktopBridge = {
   onAutomationUpdate: (callback) => {
     const unlistenPromise = listen<BotUpdate>('automation-update', (event) => callback(event.payload));
     return () => {
-      void unlistenPromise.then((unlisten) => unlisten()).catch(() => {});
+      void unlistenPromise
+        .then((unlisten) => unlisten())
+        .catch((error) => console.warn('Failed to unlisten automation updates:', error));
     };
   },
 
