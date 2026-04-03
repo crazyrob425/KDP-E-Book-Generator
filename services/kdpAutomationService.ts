@@ -30,21 +30,33 @@ export class KdpAutomationClient {
         return new Promise((resolve, reject) => {
             try {
                 this.ws = new WebSocket(this.wsUrl);
+                let settled = false;
 
                 this.ws.onopen = () => {
+                    settled = true;
                     this.reconnectAttempts = 0;
                     this.onUpdate({ type: 'log', message: '✅ Connected to automation server.' });
                     resolve();
                 };
 
-                this.ws.onerror = (evt) => {
-                    const msg = 'WebSocket connection failed. Ensure the backend server is running.';
-                    this.onUpdate({ type: 'error', message: msg });
-                    reject(new Error(msg));
+                this.ws.onerror = () => {
+                    if (!settled) {
+                        settled = true;
+                        const msg = 'WebSocket connection failed. Ensure the backend server is running.';
+                        this.onUpdate({ type: 'error', message: msg });
+                        reject(new Error(msg));
+                    }
                 };
 
-                this.ws.onclose = () => {
-                    this.onUpdate({ type: 'log', message: 'Automation server connection closed.' });
+                this.ws.onclose = (evt) => {
+                    if (!settled) {
+                        settled = true;
+                        const msg = `WebSocket closed before connection was established (code ${evt.code}).`;
+                        this.onUpdate({ type: 'error', message: msg });
+                        reject(new Error(msg));
+                    } else {
+                        this.onUpdate({ type: 'log', message: 'Automation server connection closed.' });
+                    }
                 };
 
                 this.ws.onmessage = (event) => {
