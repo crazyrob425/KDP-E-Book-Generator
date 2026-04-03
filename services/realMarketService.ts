@@ -1,6 +1,7 @@
 import { MarketReport, GoogleTrendsData } from '../types';
 import { getAi } from './geminiService';
 import { GenerateContentResponse, Type } from "@google/genai";
+import desktopBridge from './desktopBridge';
 
 export const generateRealMarketReport = async (topic: string, genre?: string): Promise<MarketReport> => {
     console.log(`Starting real market research for: ${topic}`);
@@ -8,7 +9,7 @@ export const generateRealMarketReport = async (topic: string, genre?: string): P
     // 1. Fetch Google Trends Data
     let trendsData: GoogleTrendsData | null = null;
     try {
-        trendsData = await window.electronAPI.fetchGoogleTrends(topic);
+        trendsData = await desktopBridge.fetchGoogleTrends(topic);
     } catch (e) {
         console.warn("Failed to fetch Google Trends:", e);
     }
@@ -16,7 +17,7 @@ export const generateRealMarketReport = async (topic: string, genre?: string): P
     // 2. Fetch Amazon Competitors
     let competitors: any[] = [];
     try {
-        competitors = await window.electronAPI.fetchAmazonCompetitors(topic);
+        competitors = await desktopBridge.fetchAmazonCompetitors(topic);
     } catch (e) {
         console.warn("Failed to fetch Amazon competitors:", e);
     }
@@ -24,7 +25,7 @@ export const generateRealMarketReport = async (topic: string, genre?: string): P
     // 3. Fetch Amazon Suggestions (for keywords)
     let suggestions: string[] = [];
     try {
-        suggestions = await window.electronAPI.fetchAmazonSuggestions(topic);
+        suggestions = await desktopBridge.fetchAmazonSuggestions(topic);
     } catch (e) {
         console.warn("Failed to fetch Amazon suggestions:", e);
     }
