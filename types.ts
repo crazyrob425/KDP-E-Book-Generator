@@ -224,3 +224,26 @@ export interface ProjectFileV2 {
         selectedGenre?: GenreSuggestion;
     };
 }
+
+// ─── Generation Settings & Telemetry (vibe-coding upgrades) ──────────────────
+
+export interface GenerationSettings {
+  strategy: 'chunked' | 'single';
+  sceneMin: number;
+  sceneMax: number;
+  emotionalPolish: boolean;
+  expansionCapPct: number;
+  projectSeed: string;
+  rerollNonces: Record<number, number>;
+}
+
+export interface TelemetryEntry {
+  id: string;
+  timestamp: number;
+  model: string;
+  task: string;
+  estimatedInputTokens: number;
+  estimatedOutputTokens: number;
+  cacheHit: boolean;
+  durationMs: number;
+}
