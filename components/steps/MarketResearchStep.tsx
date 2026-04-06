@@ -195,7 +195,7 @@ const MarketResearchStep: React.FC<MarketResearchStepProps> = ({
                 </button>
               </div>
               {researchMode === 'real' && supportsRealResearch && (
-                <p className="text-xs text-emerald-400 mb-2">📡 Live Google Trends + Amazon scraping will be used. Gemini will synthesise the results.</p>
+                <p className="text-xs text-emerald-400 mb-2">📡 Live Google Trends + Amazon scraping will be used. Gemini will synthesize the results.</p>
               )}
               {researchMode === 'ai' && (
                 <p className="text-xs text-violet-400 mb-2">🤖 Gemini AI will simulate trend and competitor data. No external requests.</p>
