@@ -210,10 +210,26 @@ async function fetchAmazonCompetitors(keyword) {
     if (browser) await browser.close();
   }
 }
+async function fetchAmazonSuggestions(keyword) {
+  try {
+    const response = await fetch(`https://completion.amazon.com/api/2017/suggestions?session-id=123-4567890-123456&customer-id=&request-id=12345&page-type=Search&lop=en_US&site-variant=desktop&client-info=amazon-search-ui&mid=ATVPDKIKX0DER&alias=aps&b2b=0&fresh=0&ks=65&prefix=${encodeURIComponent(keyword)}&event=onKeyPress&limit=11&fb=1&suggestion-type=KEYWORD`);
+    const data = await response.json();
+    if (data.suggestions) {
+      return data.suggestions.map((s) => s.value);
+    }
+    return [];
+  } catch (e) {
+    console.error("Amazon Suggestions Error:", e);
+    return [];
+  }
+}
 
 // electron/main.ts
-if (require("electron-squirrel-startup")) {
-  import_electron.app.quit();
+try {
+  if (require("electron-squirrel-startup")) {
+    import_electron.app.quit();
+  }
+} catch {
 }
 var mainWindow = null;
 var automationGenerator = null;
@@ -238,7 +254,9 @@ var createWindow = () => {
     import_electron.shell.openExternal(url);
     return { action: "deny" };
   });
-  mainWindow.webContents.openDevTools();
+  if (process.env.VITE_DEV_SERVER_URL) {
+    mainWindow.webContents.openDevTools();
+  }
   mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
     console.error("Failed to load window:", errorCode, errorDescription);
   });
@@ -274,9 +292,15 @@ import_electron.ipcMain.handle("start-automation", async (event, payload) => {
   const sendUpdate = (update) => {
     sender.send("automation-update", update);
   };
+  if (automationGenerator) {
+    sendUpdate({ type: "error", message: "An automation run is already in progress. Please stop it before starting a new one." });
+    return;
+  }
+  if (!payload || typeof payload !== "object" || !payload.outline?.title || !payload.outline?.subtitle || !Array.isArray(payload.outline?.tableOfContents) || !payload.kdpMarketingInfo || !payload.authorProfile) {
+    sendUpdate({ type: "error", message: "Invalid automation payload: missing required fields (outline, kdpMarketingInfo, authorProfile)." });
+    return;
+  }
   try {
-    if (automationGenerator) {
-    }
     automationGenerator = runAutomation(payload, sendUpdate);
     const result = await automationGenerator.next();
     if (result.done) {
@@ -285,6 +309,7 @@ import_electron.ipcMain.handle("start-automation", async (event, payload) => {
   } catch (e) {
     console.error("Automation error:", e);
     sendUpdate({ type: "error", message: e.message });
+    automationGenerator = null;
   }
 });
 import_electron.ipcMain.handle("captcha-solution", async (event, solution) => {
@@ -306,6 +331,9 @@ import_electron.ipcMain.handle("market-research:trends", async (_, keyword) => {
 });
 import_electron.ipcMain.handle("market-research:competitors", async (_, keyword) => {
   return await fetchAmazonCompetitors(keyword);
+});
+import_electron.ipcMain.handle("market-research:suggestions", async (_, keyword) => {
+  return await fetchAmazonSuggestions(keyword);
 });
 import_electron.ipcMain.handle("save-file", async (event, data, filename) => {
   const { canceled, filePath } = await import_electron.dialog.showSaveDialog({

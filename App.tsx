@@ -109,27 +109,45 @@ function App() {
   useEffect(() => {
     const loadData = async () => {
         try {
-            const savedState = await storageService.loadState(STORAGE_KEY);
+            // PERSIST-01: Use versioned loader with automatic migration
+            const savedState = await storageService.loadStateVersioned(STORAGE_KEY);
             if (savedState) {
-                 // Validation logic
-                 let safeStep = savedState.currentStep ?? AppStep.MarketResearch;
-                 if (safeStep > AppStep.MarketResearch && (!savedState.bookOutline || !Array.isArray(savedState.bookOutline.tableOfContents))) {
+                 // Support both v1 flat schema and v2 envelope schema
+                 const state = savedState.version === 2
+                   ? {
+                       currentStep: savedState.uiState?.currentStep,
+                       marketReport: savedState.marketReport,
+                       hasViewedReport: false,
+                       bookOutline: savedState.bookOutline,
+                       pagesPerChapter: savedState.uiState?.pagesPerChapter,
+                       bookCoverUrl: savedState.covers?.current,
+                       genreSuggestions: null,
+                       topicSuggestions: null,
+                       selectedGenre: savedState.uiState?.selectedGenre,
+                       authorProfile: savedState.authorProfile,
+                       kdpMarketingInfo: savedState.marketingInfo,
+                     }
+                   : savedState; // v1 flat schema
+
+                 // Corruption guard
+                 let safeStep = state.currentStep ?? AppStep.MarketResearch;
+                 if (safeStep > AppStep.MarketResearch && (!state.bookOutline || !Array.isArray(state.bookOutline.tableOfContents))) {
                     console.warn("Corrupted state detected: Missing outline. Resetting to Market Research.");
                     safeStep = AppStep.MarketResearch;
-                    savedState.bookOutline = null;
+                    state.bookOutline = null;
                 }
 
                 setCurrentStep(safeStep);
-                setMarketReport(savedState.marketReport ?? null);
-                setHasViewedReport(savedState.hasViewedReport ?? false);
-                setBookOutline(savedState.bookOutline ?? null);
-                setPagesPerChapter(savedState.pagesPerChapter ?? '3-5 pages (medium)');
-                setBookCoverUrl(savedState.bookCoverUrl ?? null);
-                setGenreSuggestions(savedState.genreSuggestions ?? null);
-                setTopicSuggestions(savedState.topicSuggestions ?? null);
-                setSelectedGenre(savedState.selectedGenre ?? null);
-                setAuthorProfile(savedState.authorProfile ?? null);
-                setKdpMarketingInfo(savedState.kdpMarketingInfo ?? null);
+                setMarketReport(state.marketReport ?? null);
+                setHasViewedReport(state.hasViewedReport ?? false);
+                setBookOutline(state.bookOutline ?? null);
+                setPagesPerChapter(state.pagesPerChapter ?? '3-5 pages (medium)');
+                setBookCoverUrl(state.bookCoverUrl ?? null);
+                setGenreSuggestions(state.genreSuggestions ?? null);
+                setTopicSuggestions(state.topicSuggestions ?? null);
+                setSelectedGenre(state.selectedGenre ?? null);
+                setAuthorProfile(state.authorProfile ?? null);
+                setKdpMarketingInfo(state.kdpMarketingInfo ?? null);
             }
         } catch (e) {
             console.error("Failed to load state from DB", e);
@@ -298,12 +316,34 @@ function App() {
       }
   }, [selectedGenre]);
 
+  // MR-01: AI-only simulation path (no real data fetching)
+  const handleGenerateAISimulatedReport = useCallback(async (topic: string) => {
+      const genreString = selectedGenre?.genre;
+      setIsLoading(true);
+      setError(null);
+      try {
+        const report = await geminiService.generateMarketReport(topic, genreString);
+        setMarketReport(report);
+        setHasViewedReport(false);
+        setCurrentStep(AppStep.Outline);
+      } catch (e) {
+        console.error(e);
+        setError('Failed to generate AI market report.');
+      } finally {
+        setIsLoading(false);
+      }
+  }, [selectedGenre]);
+
   const handleStartWithNicheFinder = () => {
     handleStartNewProject(handleFetchGenres);
   };
 
   const handleStartWithCustomTopic = (topic: string) => {
     handleStartNewProject(() => handleGenerateFinalReport(topic));
+  };
+
+  const handleStartWithAISimulation = (topic: string) => {
+    handleStartNewProject(() => handleGenerateAISimulatedReport(topic));
   };
 
   const handleOutline = useCallback(async (bookType: string, numChapters: number, pagesPerChapterValue: string) => {
@@ -858,6 +898,7 @@ function App() {
         return <MarketResearchStep
           onStartWithNicheFinder={handleStartWithNicheFinder}
           onStartWithCustomTopic={handleStartWithCustomTopic}
+          onStartWithAISimulation={handleStartWithAISimulation}
           onSelectGenre={handleFetchTopics}
           onSelectTopic={(topic) => handleGenerateFinalReport(topic)}
           genres={genreSuggestions}
@@ -870,6 +911,7 @@ function App() {
           exampleCoverUrl={exampleCoverUrl}
           isGeneratingExampleCover={isGeneratingExampleCover}
           onGenerateExampleCover={handleGenerateExampleCover}
+          supportsRealResearch={!!(window.electronAPI || (window as any).__TAURI_INTERNALS__)}
         />;
       case AppStep.Outline:
         if (marketReport && !hasViewedReport) {

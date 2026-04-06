@@ -6,6 +6,7 @@ import Card from '../shared/Card';
 import { SparklesIcon, PhotoIcon, BookOpenIcon, ArrowPathIcon, PencilSquareIcon, XIcon, AcademicCapIcon } from '../icons';
 import LoadingSpinner from '../shared/LoadingSpinner';
 import Modal from '../shared/Modal';
+import ProofreadingPane from './content/ProofreadingPane';
 import * as geminiService from '../../services/geminiService';
 
 interface ContentGenerationStepProps {
@@ -326,6 +327,7 @@ const ContentGenerationStep: React.FC<ContentGenerationStepProps> = ({
                                                 </Button>
                                             </div>
                                         </div>
+                                        <ProofreadingPane content={editedContent} chapterTitle={activeChapter.title} />
                                     </>
                                 ) : (
                                     <Button onClick={() => onGenerateChapter(activeChapterIndex!)}>

@@ -371,7 +371,6 @@ export const runRetextChecks = async (text: string): Promise<RetextIssue[]> => {
         const retextEnglish = (await import('retext-english')).default;
         const retextRepeated = (await import('retext-repeated-words')).default;
         const retextSpacing = (await import('retext-sentence-spacing')).default;
-        const { reporter } = await import('vfile-reporter');
 
         const issues: RetextIssue[] = [];
 

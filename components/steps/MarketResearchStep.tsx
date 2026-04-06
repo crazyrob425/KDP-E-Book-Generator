@@ -9,6 +9,8 @@ import LoadingSpinner from '../shared/LoadingSpinner';
 interface MarketResearchStepProps {
   onStartWithNicheFinder: () => void;
   onStartWithCustomTopic: (topic: string) => void;
+  /** Called when the user selects AI-only (simulated) market research for a custom topic. */
+  onStartWithAISimulation: (topic: string) => void;
   onSelectGenre: (genre: GenreSuggestion) => void;
   onSelectTopic: (topic: TopicSuggestion) => void;
   genres: GenreSuggestion[] | null;
@@ -21,11 +23,14 @@ interface MarketResearchStepProps {
   exampleCoverUrl: string | null;
   isGeneratingExampleCover: boolean;
   onGenerateExampleCover: () => void;
+  /** True when running in Electron/Tauri (real market data via IPC is available). */
+  supportsRealResearch?: boolean;
 }
 
 const MarketResearchStep: React.FC<MarketResearchStepProps> = ({ 
   onStartWithNicheFinder,
   onStartWithCustomTopic,
+  onStartWithAISimulation,
   onSelectGenre,
   onSelectTopic,
   genres,
@@ -37,14 +42,20 @@ const MarketResearchStep: React.FC<MarketResearchStepProps> = ({
   onSetMode,
   exampleCoverUrl,
   isGeneratingExampleCover,
-  onGenerateExampleCover
+  onGenerateExampleCover,
+  supportsRealResearch = false,
 }) => {
   const [customTopic, setCustomTopic] = useState('');
+  // MR-01: research mode selector — 'real' uses IPC-backed live data; 'ai' is pure AI simulation
+  const [researchMode, setResearchMode] = useState<'ai' | 'real'>('ai');
 
   const handleCustomTopicSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customTopic.trim()) {
-        onStartWithCustomTopic(customTopic.trim());
+    if (!customTopic.trim()) return;
+    if (researchMode === 'real' && supportsRealResearch) {
+      onStartWithCustomTopic(customTopic.trim());
+    } else {
+      onStartWithAISimulation(customTopic.trim());
     }
   };
 
@@ -163,6 +174,32 @@ const MarketResearchStep: React.FC<MarketResearchStepProps> = ({
               <label htmlFor="custom-topic" className="block text-sm font-medium text-slate-300 mb-1">
                 Start with your own book idea:
               </label>
+              {/* MR-01: Research mode selector */}
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setResearchMode('ai')}
+                  className={`flex-1 py-1.5 rounded-md text-sm font-medium border transition-colors ${researchMode === 'ai' ? 'bg-violet-700 border-violet-500 text-white' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'}`}
+                  title="Use Gemini AI to simulate market data (works in all environments)"
+                >
+                  🤖 AI Simulation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResearchMode('real')}
+                  className={`flex-1 py-1.5 rounded-md text-sm font-medium border transition-colors ${researchMode === 'real' ? 'bg-emerald-700 border-emerald-500 text-white' : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'} ${!supportsRealResearch ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={supportsRealResearch ? 'Fetch live Google Trends + Amazon data (desktop only)' : 'Live market data is only available in Electron/Tauri desktop mode'}
+                  disabled={!supportsRealResearch}
+                >
+                  📡 Real Data {!supportsRealResearch && <span className="text-xs opacity-60">(desktop only)</span>}
+                </button>
+              </div>
+              {researchMode === 'real' && supportsRealResearch && (
+                <p className="text-xs text-emerald-400 mb-2">📡 Live Google Trends + Amazon scraping will be used. Gemini will synthesise the results.</p>
+              )}
+              {researchMode === 'ai' && (
+                <p className="text-xs text-violet-400 mb-2">🤖 Gemini AI will simulate trend and competitor data. No external requests.</p>
+              )}
               <div className="flex gap-2">
                 <input
                   id="custom-topic"
