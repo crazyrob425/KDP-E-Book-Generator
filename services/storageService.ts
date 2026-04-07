@@ -128,7 +128,7 @@ export const migrateState = (raw: any): any => {
     marketingInfo: raw.kdpMarketingInfo ?? raw.marketingInfo ?? null,
     covers: raw.covers ?? {
       current: raw.bookCoverUrl ?? null,
-      history: raw.bookCoverUrl ? [raw.bookCoverUrl] : [],
+      history: raw.covers?.history ?? (raw.bookCoverUrl ? [raw.bookCoverUrl] : []),
     },
     uiState: raw.uiState ?? {
       currentStep: raw.currentStep ?? 0,

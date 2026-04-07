@@ -1,10 +1,13 @@
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import pngToIco from 'png-to-ico';
 
-const ROOT = '/home/runner/work/KDP-E-Book-Generator/KDP-E-Book-Generator';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..');
 const sourceLogoImage = path.join(ROOT, 'assets/branding/logo_source.png');
 const fallbackIconSvg = path.join(ROOT, 'assets/branding/app-icon.svg');
 const splashSvg = path.join(ROOT, 'assets/branding/splash-screen.svg');

@@ -58,7 +58,7 @@ Section "Core Application Files" SEC_CORE
   SetOutPath "$INSTDIR"
 
   ; Replace with real package payload when compile order is given.
-  ; Example:
+  ; Example (paths are relative to installer/windows at compile time):
   ; File /r "..\\..\\dist\\*.*"
   ; File /r "..\\..\\dist-electron\\*.*"
 
