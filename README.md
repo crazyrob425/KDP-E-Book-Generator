@@ -176,6 +176,33 @@ If using the standalone backend mode, follow `/server/README.md`.
   npx tsc -p server/tsconfig.json --noEmit
   ```
 
+## 🧩 Windows 11 Installer Wizard Prep (No Compile Yet)
+
+This repository now includes a prepared custom installer scaffold under:
+
+- `installer/windows/KDPEBookGeneratorInstaller.nsi`
+- `installer/windows/legal/*`
+- `installer/windows/scripts/*`
+
+Support scripts:
+
+```bash
+npm run branding:generate
+npm run installer:prep
+```
+
+Before installer compile, place the official user-provided logo at:
+
+- `assets/branding/logo_source.png`
+
+Then regenerate icon/splash assets:
+
+```bash
+npm run branding:generate
+```
+
+Compilation is intentionally deferred until explicit approval.
+
 ## 🛠️ Troubleshooting
 
 - **`vite: not found`**

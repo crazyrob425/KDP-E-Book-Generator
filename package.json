@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "tauri:dev": "concurrently -k \"cd server && npm run start\" \"tauri dev\"",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "branding:generate": "node scripts/generate-branding-assets.mjs",
+    "installer:prep": "npm run branding:generate",
+    "installer:release:check": "powershell -ExecutionPolicy Bypass -NoProfile -File installer/windows/scripts/check-latest-release.ps1"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",

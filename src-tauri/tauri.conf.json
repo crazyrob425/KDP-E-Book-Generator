@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KDP E-Book Generator",
-  "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "version": "2.1.0",
+  "identifier": "com.blacklistedbinary.kdpebookgenerator",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -13,8 +13,8 @@
     "windows": [
       {
         "title": "KDP E-Book Generator",
-        "width": 800,
-        "height": 600,
+        "width": 1200,
+        "height": 800,
         "resizable": true,
         "fullscreen": false
       }
