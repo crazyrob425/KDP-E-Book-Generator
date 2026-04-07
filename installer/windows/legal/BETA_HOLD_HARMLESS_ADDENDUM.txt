@@ -1,0 +1,30 @@
+BETA SOFTWARE HOLD HARMLESS ADDENDUM
+
+Effective Date: 2026-04-07
+
+This Beta Addendum applies to all beta, preview, release-candidate, experimental, and pre-release builds of KDP E-Book Generator ("Beta Software").
+
+1. ACKNOWLEDGMENT OF INSTABILITY
+You acknowledge that Beta Software may be significantly more buggy, unstable, incomplete, or unreliable than production software.
+
+2. ASSUMPTION OF RISK
+You voluntarily assume all risks associated with installing and using Beta Software, including data loss, workflow interruption, failed automation actions, content defects, and account-impacting behavior.
+
+3. STRICT HOLD HARMLESS
+To the maximum extent permitted by law, you agree to hold harmless and release the development team, maintainers, and contributors from any and all claims, losses, liabilities, damages, penalties, and costs arising out of or related to Beta Software use.
+
+4. NO RESPONSIBILITY FOR ACCOUNT OUTCOMES
+The development team is not responsible for warnings, restrictions, suspension, bans, removals, policy actions, or other status changes affecting your Amazon KDP account or any other online account.
+
+5. BUG REPORTING OBLIGATION
+As a condition of beta use, you agree to report discovered bugs and reproducible issues to the development team in a timely manner via:
+- Official GitHub issues/discussions for the project, or
+- The in-app feedback form (when available).
+
+6. MITIGATION DUTY
+You agree to use test/sandbox accounts and staged rollouts where practical, and to manually verify all outputs before public release.
+
+7. PRIORITY OF ADDENDUM
+If this Addendum conflicts with other software terms for Beta Software usage, this Addendum governs.
+
+By accepting this Addendum, you confirm your informed consent to Beta Software risk and your agreement to hold the development team harmless.

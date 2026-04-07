@@ -1,0 +1,35 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="KDP E-Book Generator Splash">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E1B4B"/>
+      <stop offset="45%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#064E3B"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <circle cx="1320" cy="130" r="220" fill="#7C3AED" opacity="0.18"/>
+  <circle cx="260" cy="760" r="260" fill="#10B981" opacity="0.16"/>
+
+  <g transform="translate(170,170)">
+    <rect x="0" y="0" width="190" height="190" rx="38" fill="#0B1220" stroke="#C4B5FD" stroke-width="8"/>
+    <path d="M32 52h63c24 0 43 19 43 43v54h-9V98c0-19-14-33-33-33H32V52z" fill="#A78BFA"/>
+    <path d="M158 52H95c-24 0-43 19-43 43v54h9V98c0-19 14-33 33-33h64V52z" fill="#34D399"/>
+    <text x="95" y="170" text-anchor="middle" fill="#E2E8F0" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">KDP AI</text>
+  </g>
+
+  <text x="410" y="280" fill="#F8FAFC" font-family="Segoe UI, Arial, sans-serif" font-size="72" font-weight="700">KDP E-Book Generator</text>
+  <text x="410" y="350" fill="#CBD5E1" font-family="Segoe UI, Arial, sans-serif" font-size="34">AI-Powered Authoring, Publishing, and Automation Suite</text>
+
+  <rect x="410" y="402" width="820" height="4" rx="2" fill="url(#accent)"/>
+
+  <text x="410" y="500" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="28">Built by Blacklisted Binary Labs</text>
+  <text x="410" y="548" fill="#94A3B8" font-family="Segoe UI, Arial, sans-serif" font-size="26">Lead Developer: Rob Branting, BBLabs Founding Member</text>
+
+  <text x="410" y="710" fill="#E2E8F0" font-family="Segoe UI, Arial, sans-serif" font-size="24">Preparing your publishing workstation…</text>
+  <rect x="410" y="740" width="760" height="18" rx="9" fill="#1E293B"/>
+  <rect x="410" y="740" width="560" height="18" rx="9" fill="url(#accent)"/>
+</svg>
