@@ -44,8 +44,10 @@ const createWindow = () => {
       return { action: 'deny' };
   });
 
-  // DEBUG: Open DevTools to debug blank screen
-  mainWindow.webContents.openDevTools();
+  // DEBUG: Open DevTools to debug blank screen (only when not packaged)
+  if (!app.isPackaged) {
+      mainWindow!.webContents.openDevTools();
+  }
 
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error('Failed to load window:', errorCode, errorDescription);
