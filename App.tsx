@@ -697,16 +697,17 @@ function App() {
              setBookOutline({ ...bookOutline, tableOfContents: results });
 
         } else {
-            const humanizedChapters = await Promise.all(
-                bookOutline.tableOfContents.map(async (chapter) => {
-                    if (chapter.content) {
-                        const humanizedContent = await geminiService.humanizeChapterContent(chapter.content);
-                        return { ...chapter, content: humanizedContent };
-                    }
-                    return chapter;
-                })
-            );
-            setBookOutline({ ...bookOutline, tableOfContents: humanizedChapters });
+            // Sequential Execution: process one chapter at a time
+            const currentChapters = [...bookOutline.tableOfContents];
+            for (let i = 0; i < currentChapters.length; i++) {
+                if (currentChapters[i].content) {
+                    currentChapters[i] = {
+                        ...currentChapters[i],
+                        content: await geminiService.humanizeChapterContent(currentChapters[i].content!),
+                    };
+                    setBookOutline(prev => prev ? { ...prev, tableOfContents: [...currentChapters] } : null);
+                }
+            }
         }
     } catch (e) {
         console.error(e);
@@ -860,6 +861,9 @@ function App() {
         kdpMarketingInfo,
         pagesPerChapter,
         automationPayload,
+        bookGenre,
+        bookBible,
+        researchContext,
         chapterLoadingStates: {} // Don't save loading states
     };
 
@@ -896,6 +900,9 @@ function App() {
                   if (data.kdpMarketingInfo) setKdpMarketingInfo(data.kdpMarketingInfo);
                   if (data.pagesPerChapter) setPagesPerChapter(data.pagesPerChapter);
                   if (data.automationPayload) setAutomationPayload(data.automationPayload);
+                  if (data.bookGenre) setBookGenre(data.bookGenre);
+                  if (data.bookBible) setBookBible(data.bookBible);
+                  if (data.researchContext) setResearchContext(data.researchContext);
                   
                   // Reset temporary UI states
                   setError(null);

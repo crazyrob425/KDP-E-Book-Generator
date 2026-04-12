@@ -9,14 +9,25 @@ import { truncateToTokenBudget } from './tokenOptimizer';
 // ---------------------------------------------------------------------------
 const vectorStore: Map<number, { content: string; embedding: number[] }> = new Map();
 
-// Lazy-loaded embedder singleton
+// Lazy-loaded embedder singleton with a promise-lock to prevent race conditions
+// when multiple chapters are embedded concurrently (e.g. in batch mode).
 let embedderInstance: any = null;
+let embedderLoadingPromise: Promise<any> | null = null;
 
 async function getEmbedder(): Promise<any> {
-  if (!embedderInstance) {
-    embedderInstance = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-  }
-  return embedderInstance;
+  if (embedderInstance) return embedderInstance;
+  if (embedderLoadingPromise) return embedderLoadingPromise;
+  embedderLoadingPromise = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
+    .then((instance: any) => {
+      embedderInstance = instance;
+      embedderLoadingPromise = null;
+      return instance;
+    })
+    .catch((err: unknown) => {
+      embedderLoadingPromise = null; // allow retry on next call
+      throw err;
+    });
+  return embedderLoadingPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,10 +106,9 @@ export async function extractBibleEntries(
     // Dynamic import to avoid circular dep (ragService ← geminiService ← ragService)
     const { getAi } = await import('./geminiService');
     const { Type } = await import('@google/genai');
-    const { truncateToTokenBudget: ttb } = await import('./tokenOptimizer');
 
     const ai = getAi();
-    const excerpt = ttb(chapterContent, 1000);
+    const excerpt = truncateToTokenBudget(chapterContent, 1000);
     const prompt = `Extract story bible entries from Chapter ${chapterNumber} of "${bookTitle}".
 
 Chapter excerpt:

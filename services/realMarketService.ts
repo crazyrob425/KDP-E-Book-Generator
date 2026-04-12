@@ -10,11 +10,14 @@ export async function fetchTavilyResults(topic: string): Promise<ResearchSource[
   const apiKey = import.meta.env.VITE_TAVILY_API_KEY;
   if (!apiKey) return [];
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10_000); // 10 s timeout for Tavily
     const res = await fetch('https://api.tavily.com/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: apiKey, query: `best selling books about ${topic}`, max_results: 5 }),
-    });
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timer));
     if (!res.ok) return [];
     const data = await res.json();
     return (data.results || []).map((r: any) => ({

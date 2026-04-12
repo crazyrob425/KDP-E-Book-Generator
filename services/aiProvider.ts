@@ -27,6 +27,16 @@ export function saveProviderConfig(config: AIProviderConfig): void {
   }
 }
 
+const FETCH_TIMEOUT_MS = 30_000; // 30 s hard limit on all network calls
+
+function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 export async function testProviderConnection(
   config: AIProviderConfig
 ): Promise<{ success: boolean; message: string }> {
@@ -52,7 +62,7 @@ export async function testProviderConnection(
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (config.openaiApiKey) headers['Authorization'] = `Bearer ${config.openaiApiKey}`;
 
-      const res = await fetch(`${config.openaiBaseUrl}/chat/completions`, {
+      const res = await fetchWithTimeout(`${config.openaiBaseUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -89,7 +99,7 @@ export async function generateText(prompt: string, systemPrompt?: string): Promi
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (config.openaiApiKey) headers['Authorization'] = `Bearer ${config.openaiApiKey}`;
 
-      const res = await fetch(`${config.openaiBaseUrl}/chat/completions`, {
+      const res = await fetchWithTimeout(`${config.openaiBaseUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ model: config.openaiModel || 'default', messages, stream: false }),
@@ -126,7 +136,7 @@ export async function generateTextStream(
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (config.openaiApiKey) headers['Authorization'] = `Bearer ${config.openaiApiKey}`;
 
-      const res = await fetch(`${config.openaiBaseUrl}/chat/completions`, {
+      const res = await fetchWithTimeout(`${config.openaiBaseUrl}/chat/completions`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ model: config.openaiModel || 'default', messages, stream: true }),

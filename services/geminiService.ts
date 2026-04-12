@@ -892,6 +892,11 @@ Return a JSON object with title, subtitle, and tableOfContents (chapter number, 
   );
 
   const rawOutline: BookOutline = JSON.parse(firstResponse.text || '{}');
+  // Guard: ensure the outline has a valid tableOfContents before proceeding
+  if (!rawOutline.tableOfContents || rawOutline.tableOfContents.length === 0) {
+    console.warn('[Outline] First pass returned empty outline, returning as-is.');
+    return rawOutline;
+  }
 
   if (skipImprovementPass) return rawOutline;
 

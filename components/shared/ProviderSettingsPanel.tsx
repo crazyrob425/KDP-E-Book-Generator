@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AIProviderConfig, saveProviderConfig, testProviderConnection } from '../../services/aiProvider';
 
 interface ProviderSettingsPanelProps {
@@ -15,6 +15,19 @@ const ProviderSettingsPanel: React.FC<ProviderSettingsPanelProps> = ({
   const [local, setLocal] = useState<AIProviderConfig>(config);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss when clicking outside the panel
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    // Use capture so the event fires before any bubbling stopPropagation
+    document.addEventListener('mousedown', handler, true);
+    return () => document.removeEventListener('mousedown', handler, true);
+  }, [onClose]);
 
   const handleChange = (updates: Partial<AIProviderConfig>) => {
     const next = { ...local, ...updates };
@@ -35,7 +48,7 @@ const ProviderSettingsPanel: React.FC<ProviderSettingsPanelProps> = ({
   };
 
   return (
-    <div className="absolute bottom-full right-0 mb-2 w-80 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-4 z-50 text-sm">
+    <div ref={panelRef} className="absolute bottom-full right-0 mb-2 w-80 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl p-4 z-50 text-sm">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-white">AI Provider Settings</h3>
         <button onClick={onClose} className="text-slate-400 hover:text-white text-lg leading-none">×</button>
