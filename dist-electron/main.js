@@ -212,8 +212,11 @@ async function fetchAmazonCompetitors(keyword) {
 }
 
 // electron/main.ts
-if (require("electron-squirrel-startup")) {
-  import_electron.app.quit();
+try {
+  if (require("electron-squirrel-startup")) {
+    import_electron.app.quit();
+  }
+} catch {
 }
 var mainWindow = null;
 var automationGenerator = null;
