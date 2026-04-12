@@ -1,7 +1,33 @@
-import { MarketReport, GoogleTrendsData } from '../types';
+import { MarketReport, GoogleTrendsData, ResearchSource } from '../types';
 import { getAi } from './geminiService';
 import { GenerateContentResponse, Type } from "@google/genai";
 import desktopBridge from './desktopBridge';
+
+// ---------------------------------------------------------------------------
+// Optional: Tavily live web search (skipped gracefully when key is absent)
+// ---------------------------------------------------------------------------
+export async function fetchTavilyResults(topic: string): Promise<ResearchSource[]> {
+  const apiKey = import.meta.env.VITE_TAVILY_API_KEY;
+  if (!apiKey) return [];
+  try {
+    const res = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey, query: `best selling books about ${topic}`, max_results: 5 }),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || []).map((r: any) => ({
+      title: r.title || 'Untitled',
+      summary: (r.content || '').substring(0, 300),
+      relevance: r.url || '',
+      sourceType: 'web' as const,
+    }));
+  } catch (e) {
+    console.warn('[Tavily] Fetch failed:', e);
+    return [];
+  }
+}
 
 export const generateRealMarketReport = async (topic: string, genre?: string): Promise<MarketReport> => {
     console.log(`Starting real market research for: ${topic}`);
@@ -30,25 +56,38 @@ export const generateRealMarketReport = async (topic: string, genre?: string): P
         console.warn("Failed to fetch Amazon suggestions:", e);
     }
 
-    // 4. Synthesize Report using Gemini (feeding it valid data)
+    // 4. Optional: Tavily live web research
+    let tavilyResults: ResearchSource[] = [];
+    try {
+        tavilyResults = await fetchTavilyResults(topic);
+    } catch (e) {
+        console.warn("Tavily failed:", e);
+    }
+
+    const tavilyBlock = tavilyResults.length > 0
+        ? `\n\n**Live Web Research:**\n${tavilyResults.map(r => `- ${r.title}: ${r.summary}`).join('\n')}`
+        : '';
+
+    // 5. Synthesize Report using Gemini with real data
     const prompt = `
     Analyze the following REAL market data for the book topic "${topic}"${genre ? ` in genre "${genre}"` : ''}.
     
     **Google Trends Data:**
-    ${trendsData ? JSON.stringify(trendsData.interestOverTime.slice(-12)) : "Not available"}
+    ${trendsData ? JSON.stringify(trendsData.interestOverTime.slice(-12)) : "Not available from desktop. Provide expert analysis instead."}
     
     **Top Amazon Competitors:**
-    ${competitors.map(c => `- ${c.title} by ${c.author} (Rating: ${c.rating}, Reviews: ${c.reviewCount})`).join('\n')}
+    ${competitors.length > 0 ? competitors.map((c: any) => `- ${c.title} by ${c.author} (Rating: ${c.rating}, Reviews: ${c.reviewCount})`).join('\n    ') : "Not available — use genre knowledge."}
     
     **Amazon Search Suggestions (Keywords):**
-    ${suggestions.join(', ')}
+    ${suggestions.length > 0 ? suggestions.join(', ') : "Not available — suggest based on topic."}${tavilyBlock}
 
-    Based on this REAL data, generate a comprehensive market report.
-    - **Trend Analysis**: Interpret the trends data and competitor saturation.
-    - **Target Audience**: Deduce from the competitor reviews and types.
-    - **Keywords**: Select the best ones from suggestions + others.
-    - **Competitor Analysis**: Summarize the success factors of the provided competitors.
+    Based on this data, generate a comprehensive market report.
+    - **Trend Analysis**: Interpret the trends, competitor saturation, and demand signals.
+    - **Target Audience**: Deduce demographics, interests, and pain points from the data.
+    - **Keywords**: Select the highest-value keywords.
+    - **Competitor Analysis**: Summarize success factors.
     
+    Do NOT fabricate data — work only with what is provided above.
     Return JSON matching the MarketReport schema.
     `;
 
@@ -98,16 +137,10 @@ export const generateRealMarketReport = async (topic: string, genre?: string): P
 
     const report: MarketReport = JSON.parse(response.text || '{}');
     
-    // Inject the REAL trends data back into the report object so the UI displays the real chart
+    // Inject real trends data into the report
     if (trendsData) {
         report.googleTrends = trendsData;
     }
-
-    // If we have real competitor data, we might want to ensure the report reflects it accurately.
-    // The AI might have summarized it, but let's double check. 
-    // Actually, passing it to the AI to "summarize success factors" is good.
-    // But maybe we want to augment the UI to show the raw book covers? 
-    // For now, we stick to the existing UI contract.
     
     return report;
 };

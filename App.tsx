@@ -1,9 +1,13 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload } from './types';
+import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload, BookGenre, BookBible, NonFictionResearchContext } from './types';
 import * as geminiService from './services/geminiService';
 import * as realMarketService from './services/realMarketService';
 import * as storageService from './services/storageService';
+import { loadProviderConfig, AIProviderConfig } from './services/aiProvider';
+import { getTotalEstimatedTokens } from './services/tokenOptimizer';
+import { extractBibleEntries, embedChapter, clearVectorStore } from './services/ragService';
+import ProviderSettingsPanel from './components/shared/ProviderSettingsPanel';
 
 import StepIndicator from './components/shared/StepIndicator';
 import MarketResearchStep from './components/steps/MarketResearchStep';
@@ -76,6 +80,22 @@ function App() {
   const [batchProjects, setBatchProjects] = useState<BatchProject[]>([]);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
 
+  // NEW: Fiction/Non-Fiction, Book Bible, Research Context
+  const [bookGenre, setBookGenre] = useState<BookGenre>('non-fiction');
+  const [bookBible, setBookBible] = useState<BookBible | null>(null);
+  const [researchContext, setResearchContext] = useState<NonFictionResearchContext | null>(null);
+
+  // NEW: Live token counter
+  const [totalTokens, setTotalTokens] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTotalTokens(getTotalEstimatedTokens()), 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // NEW: AI Provider config
+  const [providerConfig, setProviderConfig] = useState<AIProviderConfig>(() => loadProviderConfig());
+  const [isProviderPanelOpen, setIsProviderPanelOpen] = useState(false);
+
   // --- AUTO SAVE ---
   const { lastSaved, isSaving: isAutoSaving } = useAutoSave({
       mode,
@@ -130,6 +150,8 @@ function App() {
                 setSelectedGenre(savedState.selectedGenre ?? null);
                 setAuthorProfile(savedState.authorProfile ?? null);
                 setKdpMarketingInfo(savedState.kdpMarketingInfo ?? null);
+                setBookGenre(savedState.bookGenre ?? 'non-fiction');
+                setBookBible(savedState.bookBible ?? null);
             }
         } catch (e) {
             console.error("Failed to load state from DB", e);
@@ -181,6 +203,8 @@ function App() {
           selectedGenre,
           authorProfile,
           kdpMarketingInfo,
+          bookGenre,
+          bookBible,
         };
         storageService.saveState(STORAGE_KEY, stateToSave).catch(e => console.error("Save failed", e));
         
@@ -192,7 +216,7 @@ function App() {
     return () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     }
-  }, [mode, currentStep, marketReport, hasViewedReport, bookOutline, pagesPerChapter, bookCoverUrl, genreSuggestions, topicSuggestions, selectedGenre, authorProfile, kdpMarketingInfo, isLoading]);
+  }, [mode, currentStep, marketReport, hasViewedReport, bookOutline, pagesPerChapter, bookCoverUrl, genreSuggestions, topicSuggestions, selectedGenre, authorProfile, kdpMarketingInfo, bookGenre, bookBible, isLoading]);
 
   const handleRequestPersistence = async () => {
       const granted = await storageService.requestPersistentStorage();
@@ -235,6 +259,10 @@ function App() {
         setSelectedGenre(null);
         setCurrentStep(AppStep.MarketResearch);
         setError(null);
+        setBookBible(null);
+        setResearchContext(null);
+        // Clear RAG vector store so embeddings don't bleed into new project
+        clearVectorStore();
         
         startAction();
     };
@@ -318,7 +346,15 @@ function App() {
       const maxPages = parseInt(match[2], 10) * numChapters;
       const totalPageRange = `${minPages}-${maxPages} pages`;
 
-      const outline = await geminiService.generateBookOutline(marketReport, bookType, numChapters, totalPageRange);
+      const outline = await geminiService.generateBookOutlineWithImprovement(
+        marketReport,
+        bookType,
+        numChapters,
+        totalPageRange,
+        bookGenre,
+        researchContext || undefined,
+        mode === AppMode.Batch // skip improvement pass in batch mode
+      );
       setBookOutline(outline);
     } catch (e) {
       console.error(e);
@@ -326,7 +362,7 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [marketReport]);
+  }, [marketReport, bookGenre, researchContext, mode]);
   
   const handleRegenerateTitle = useCallback(async () => {
     if (!marketReport) return;
@@ -350,7 +386,7 @@ function App() {
     setError(null);
 
     try {
-        let content;
+        let content: string;
         if (currentContent && currentContent.trim().length > 0) {
             content = await geminiService.regenerateChapterWithGuidance(
                 chapter.title, 
@@ -360,7 +396,28 @@ function App() {
                 instructions
             );
         } else {
-            content = await geminiService.generateChapterContent(chapter.title, chapter.summary, pagesPerChapter);
+            // Use streaming for initial generation
+            let accumulated = '';
+            content = await geminiService.generateChapterContentStream(
+                chapter.title,
+                chapter.summary,
+                pagesPerChapter,
+                (chunk: string) => {
+                    accumulated += chunk;
+                    // Live update the editor as chunks arrive
+                    setBookOutline(prev => {
+                        if (!prev) return null;
+                        const newToc = [...prev.tableOfContents];
+                        newToc[chapterIndex] = { ...newToc[chapterIndex], content: accumulated };
+                        return { ...prev, tableOfContents: newToc };
+                    });
+                },
+                {
+                    bible: bookBible || undefined,
+                    bookGenre,
+                    researchContext: researchContext || undefined,
+                }
+            );
         }
 
         setBookOutline(prev => {
@@ -369,13 +426,23 @@ function App() {
             newToc[chapterIndex] = { ...newToc[chapterIndex], content };
             return { ...prev, tableOfContents: newToc };
         });
+
+        // Background: embed chapter for RAG and extract Bible entries
+        const currentBible = bookBible || { characters: [], locations: [], keyEvents: [], themes: [] };
+        embedChapter(chapterIndex, content).catch(() => {});
+        extractBibleEntries(content, chapter.chapter, currentBible, bookOutline.title)
+            .then(updatedBible => {
+                setBookBible(updatedBible);
+                setBookOutline(prev => prev ? { ...prev, bookBible: updatedBible } : null);
+            })
+            .catch(() => {});
     } catch (e) {
         console.error(e);
         setError(`Failed to generate content for Chapter ${chapter.chapter}.`);
     } finally {
         setChapterLoadingStates(prev => ({...prev, [chapter.chapter]: false}));
     }
-  }, [bookOutline, pagesPerChapter]);
+  }, [bookOutline, pagesPerChapter, bookBible, bookGenre, researchContext]);
 
   const handleUpdateChapterContent = useCallback((chapterIndex: number, content: string) => {
     setBookOutline(prev => {
@@ -886,6 +953,8 @@ function App() {
                   setBookOutline={setBookOutline} 
                   onRegenerateTitle={handleRegenerateTitle}
                   isRegeneratingTitle={isRegeneratingTitle}
+                  bookGenre={bookGenre}
+                  onSetBookGenre={setBookGenre}
                 />;
       case AppStep.Content:
         return <ContentGenerationStep 
@@ -1061,6 +1130,26 @@ function App() {
                      {isHighPerformanceMode ? <RocketLaunchIcon className="w-3 h-3" /> : null}
                      {isHighPerformanceMode ? "High Concurrency" : "Sequential"}
                  </button>
+             </div>
+             {totalTokens > 0 && (
+               <span className="text-slate-600">~{totalTokens.toLocaleString()} tokens</span>
+             )}
+             {/* AI Provider pill */}
+             <div className="relative">
+               <button
+                 onClick={() => setIsProviderPanelOpen(v => !v)}
+                 className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 hover:border-violet-600 hover:text-violet-400 transition-colors"
+                 title="Switch AI provider"
+               >
+                 {providerConfig.type === 'gemini' ? 'Gemini ✦' : `${providerConfig.openaiModel || 'Custom'} ⚡`} ▾
+               </button>
+               {isProviderPanelOpen && (
+                 <ProviderSettingsPanel
+                   config={providerConfig}
+                   onConfigChange={setProviderConfig}
+                   onClose={() => setIsProviderPanelOpen(false)}
+                 />
+               )}
              </div>
              <span>App v1.5.0</span>
         </div>
