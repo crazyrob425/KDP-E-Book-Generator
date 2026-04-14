@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Environment files — NEVER commit real keys
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +27,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Tauri build artifacts
+src-tauri/target/
+
+# Playwright state
+playwright-state.json
