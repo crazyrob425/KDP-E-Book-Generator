@@ -276,15 +276,19 @@ ipcMain.handle('oauth:start', async (event, provider: ProxyProvider) => {
 
             const url = new URL(req.url, `http://localhost:${config.port}`);
             const code = url.searchParams.get('code');
-            const error = url.searchParams.get('error');
+            // Sanitize the error parameter — it comes from the external OAuth provider
+            // and must not be reflected back into HTML or IPC messages without sanitization.
+            const rawError = url.searchParams.get('error');
+            const error = rawError ? rawError.replace(/[^\w\s\-_.]/g, '') : null;
 
             if (error || !code) {
+                const displayError = error ?? 'No authorization code received';
                 res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(buildCallbackPage(false, `Auth failed: ${error ?? 'No code received'}`, provider));
-                sendOAuthStatus(provider, 'error', `OAuth cancelled or failed: ${error ?? 'No code'}`);
+                res.end(buildCallbackPage(false, `Auth failed: ${displayError}`, provider));
+                sendOAuthStatus(provider, 'error', `OAuth cancelled or failed: ${displayError}`);
                 server.close();
                 oauthServers.delete(provider);
-                resolve({ success: false, error: error ?? 'No code received' });
+                resolve({ success: false, error: displayError });
                 return;
             }
 
@@ -499,6 +503,16 @@ async function updateProxyAccountsList(provider: ProxyProvider, accountId: strin
     mainWindow?.webContents.send('proxy-accounts-updated', settings.accounts);
 }
 
+// ─── HTML-escape helper to prevent XSS in callback page ──────────────────────
+function escapeHtml(unsafe: string): string {
+    return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 // ─── HTML page shown in browser after OAuth callback ─────────────────────────
 function buildCallbackPage(isSuccess: boolean, message: string, provider: string): string {
     const title = isSuccess ? '✅ Connected!' : '❌ Connection Failed';
@@ -509,11 +523,15 @@ function buildCallbackPage(isSuccess: boolean, message: string, provider: string
         ? 'You can close this tab and return to Null Library.'
         : 'Please close this tab and try again in Null Library.';
 
+    // Escape all user-provided values before embedding in HTML
+    const safeProvider = escapeHtml(provider);
+    const safeMessage = escapeHtml(message);
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>${title}</title>
+<title>${isSuccess ? 'Connected!' : 'Connection Failed'}</title>
 <style>
   body { margin:0; background:${bgColor}; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; display:flex; align-items:center; justify-content:center; height:100vh; }
   .card { background:#1e293b; border:1px solid ${borderColor}; border-radius:12px; padding:2rem 3rem; text-align:center; max-width:420px; }
@@ -526,8 +544,8 @@ function buildCallbackPage(isSuccess: boolean, message: string, provider: string
 <div class="card">
   <div class="logo">${isSuccess ? '📚' : '⚠️'}</div>
   <h1>${title}</h1>
-  <p><strong style="color:#e2e8f0">${provider}</strong></p>
-  <p>${message}</p>
+  <p><strong style="color:#e2e8f0">${safeProvider}</strong></p>
+  <p>${safeMessage}</p>
   <p style="margin-top:1.5rem;font-size:.85rem;color:#64748b">${instruction}</p>
 </div>
 <script>
