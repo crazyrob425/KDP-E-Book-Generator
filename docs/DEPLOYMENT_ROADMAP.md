@@ -21,7 +21,7 @@ This document is the single source of truth for getting every deployment target 
 - [ ] **Revoke the leaked API key** — A real `VITE_GOOGLE_API_KEY` value was committed to the repo. Immediately go to [Google AI Studio](https://aistudio.google.com/app/apikey), delete the old key, and create a new one.
 - [ ] `.env` is in `.gitignore` (fixed in this PR — verify with `git check-ignore .env`).
 - [ ] `.env.example` is the canonical setup template and contains only placeholders.
-- [ ] `src-tauri/tauri.conf.json` has the real app identifier (not `com.tauri.dev`). ✅ Fixed to `com.fraudrob.kdpebookgenerator`.
+- [ ] `src-tauri/tauri.conf.json` has the real app identifier (not `com.tauri.dev`). ✅ Fixed to `com.blacklistedbinary.kdpebookgenerator`.
 - [ ] `tauri.conf.json` version matches `package.json` version. ✅ Both now at `2.1.0`.
 - [ ] CI passes on the branch you want to release from (`Actions → CI`).
 

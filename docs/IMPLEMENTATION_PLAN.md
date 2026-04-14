@@ -66,7 +66,7 @@
 - [x] **BUG-08** — `geminiService.ts`: Guard added for empty `tableOfContents` in outline improvement pass.
 
 ### ✅ Phase 3 — Deployment Infrastructure
-- [x] **DEPLOY-01** — `src-tauri/tauri.conf.json`: Production identifier (`com.fraudrob.kdpebookgenerator`), version synced to `2.1.0`, window defaults improved.
+- [x] **DEPLOY-01** — `src-tauri/tauri.conf.json`: Production identifier (`com.blacklistedbinary.kdpebookgenerator`), version synced to `2.1.0`, window defaults improved.
 - [x] **DEPLOY-02** — `src-tauri/Cargo.toml`: Placeholder metadata updated.
 - [x] **DEPLOY-03** — `server/Dockerfile`: Two-stage Node 20 + Chromium/Playwright image written.
 - [x] **DEPLOY-04** — `.github/workflows/ci.yml`: Frontend build + server type-check on every push/PR.
@@ -163,4 +163,3 @@ npm run tauri:build
 4. **Persistence lifecycle** — Save/reload/reset/import with valid and malformed payloads.
 5. **API key/credential paths** — Missing and invalid key behavior must be actionable and non-destructive.
 6. **Tauri desktop** — Window state persists across close/reopen; file dialogs work.
-
