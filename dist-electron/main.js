@@ -212,8 +212,11 @@ async function fetchAmazonCompetitors(keyword) {
 }
 
 // electron/main.ts
-if (require("electron-squirrel-startup")) {
-  import_electron.app.quit();
+try {
+  if (require("electron-squirrel-startup")) {
+    import_electron.app.quit();
+  }
+} catch {
 }
 var mainWindow = null;
 var automationGenerator = null;
@@ -238,7 +241,9 @@ var createWindow = () => {
     import_electron.shell.openExternal(url);
     return { action: "deny" };
   });
-  mainWindow.webContents.openDevTools();
+  if (!import_electron.app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
   mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
     console.error("Failed to load window:", errorCode, errorDescription);
   });
