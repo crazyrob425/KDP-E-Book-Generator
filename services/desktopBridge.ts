@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { BotUpdate, GoogleTrendsData, KdpAutomationPayload } from '../types';
+import { BotUpdate, GoogleTrendsData, KdpAutomationPayload, ProxyProvider, ProxyAccount, ProxySettings, OAuthFlowStatus } from '../types';
 
 type SaveResult = { success: boolean; filePath?: string; error?: string };
 type LoadResult = { success: boolean; data?: string; error?: string };
@@ -22,6 +22,19 @@ export interface DesktopBridge {
   fetchGoogleTrends: (keyword: string) => Promise<GoogleTrendsData | null>;
   fetchAmazonCompetitors: (keyword: string) => Promise<any[]>;
   fetchAmazonSuggestions: (keyword: string) => Promise<string[]>;
+
+  // ── NullProxy OAuth ──
+  oauthStart: (provider: ProxyProvider) => Promise<{ success: boolean; error?: string }>;
+  oauthCancel: (provider: ProxyProvider) => Promise<void>;
+  onOAuthStatus: (callback: (status: OAuthFlowStatus) => void) => () => void;
+
+  // ── NullProxy Proxy Operations ──
+  proxyGetStatus: () => Promise<ProxyAccount[]>;
+  proxyAddAccount: (provider: ProxyProvider) => Promise<{ success: boolean; error?: string }>;
+  proxyRemoveAccount: (accountId: string) => Promise<void>;
+  proxyGetSettings: () => Promise<ProxySettings | null>;
+  proxySaveSettings: (settings: ProxySettings) => Promise<void>;
+  proxyGetCredPath: (provider: ProxyProvider, accountId: string) => Promise<string | null>;
 }
 
 const isElectron = () => typeof window !== 'undefined' && !!window.electronAPI;
@@ -47,6 +60,17 @@ const browserBridge: DesktopBridge = {
   fetchGoogleTrends: async () => null,
   fetchAmazonCompetitors: async () => [],
   fetchAmazonSuggestions: async () => [],
+
+  oauthStart: async () => ({ success: false, error: 'OAuth login requires the desktop app.' }),
+  oauthCancel: async () => {},
+  onOAuthStatus: () => () => {},
+
+  proxyGetStatus: async () => [],
+  proxyAddAccount: async () => ({ success: false, error: 'Proxy management requires the desktop app.' }),
+  proxyRemoveAccount: async () => {},
+  proxyGetSettings: async () => null,
+  proxySaveSettings: async () => {},
+  proxyGetCredPath: async () => null,
 };
 
 const electronBridge: DesktopBridge = {
@@ -65,6 +89,17 @@ const electronBridge: DesktopBridge = {
   fetchGoogleTrends: async (keyword) => window.electronAPI?.fetchGoogleTrends?.(keyword) || null,
   fetchAmazonCompetitors: async (keyword) => window.electronAPI?.fetchAmazonCompetitors?.(keyword) || [],
   fetchAmazonSuggestions: async (keyword) => window.electronAPI?.fetchAmazonSuggestions?.(keyword) || [],
+
+  oauthStart: async (provider) => window.electronAPI?.oauthStart?.(provider) || { success: false },
+  oauthCancel: async (provider) => window.electronAPI?.oauthCancel?.(provider),
+  onOAuthStatus: (callback) => window.electronAPI?.onOAuthStatus?.(callback) || (() => {}),
+
+  proxyGetStatus: async () => window.electronAPI?.proxyGetStatus?.() || [],
+  proxyAddAccount: async (provider) => window.electronAPI?.proxyAddAccount?.(provider) || { success: false },
+  proxyRemoveAccount: async (id) => window.electronAPI?.proxyRemoveAccount?.(id),
+  proxyGetSettings: async () => window.electronAPI?.proxyGetSettings?.() || null,
+  proxySaveSettings: async (settings) => window.electronAPI?.proxySaveSettings?.(settings),
+  proxyGetCredPath: async (provider, accountId) => window.electronAPI?.proxyGetCredPath?.(provider, accountId) || null,
 };
 
 const tauriBridge: DesktopBridge = {
@@ -139,8 +174,20 @@ const tauriBridge: DesktopBridge = {
       return [];
     }
   },
+
+  // Tauri doesn't implement OAuth proxy — falls back gracefully
+  oauthStart: async () => ({ success: false, error: 'OAuth proxy not supported in Tauri mode.' }),
+  oauthCancel: async () => {},
+  onOAuthStatus: () => () => {},
+  proxyGetStatus: async () => [],
+  proxyAddAccount: async () => ({ success: false, error: 'Not supported in Tauri mode.' }),
+  proxyRemoveAccount: async () => {},
+  proxyGetSettings: async () => null,
+  proxySaveSettings: async () => {},
+  proxyGetCredPath: async () => null,
 };
 
 const desktopBridge: DesktopBridge = isElectron() ? electronBridge : isTauri() ? tauriBridge : browserBridge;
 
 export default desktopBridge;
+

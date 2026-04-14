@@ -5,7 +5,7 @@ import { BookOpenIcon, EyeIcon, LightBulbIcon, PencilSquareIcon, PhotoIcon } fro
 
 interface StepIndicatorProps {
   currentStep: AppStep;
-  setStep: (step: AppStep) => void;
+  onStepClick: (step: AppStep) => void;
 }
 
 const steps = [
@@ -16,7 +16,7 @@ const steps = [
   { id: AppStep.Review, name: 'Review', icon: EyeIcon },
 ];
 
-const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) => {
+const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, onStepClick }) => {
   return (
     <nav className="flex justify-center my-8">
       <ol className="flex items-center space-x-2 sm:space-x-4 md:space-x-8">
@@ -27,7 +27,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) =
           return (
             <li key={step.name}>
               <button
-                onClick={() => setStep(step.id)}
+                onClick={() => onStepClick(step.id)}
                 disabled={step.id > currentStep}
                 className={`flex flex-col items-center text-center transition-colors duration-300 disabled:cursor-not-allowed group`}
               >

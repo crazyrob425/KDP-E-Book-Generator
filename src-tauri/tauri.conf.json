@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "KDP E-Book Generator",
-  "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "productName": "Null Library",
+  "version": "3.0.0",
+  "identifier": "com.nulllibrary.app",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "KDP E-Book Generator",
+        "title": "Null Library",
         "width": 800,
         "height": 600,
         "resizable": true,

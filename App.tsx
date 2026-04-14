@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload } from './types';
+import { AppStep, BookOutline, Chapter, MarketReport, AuthorProfile, GenreSuggestion, TopicSuggestion, KdpMarketingInfo, AppMode, BatchProject, KdpAutomationPayload, ProxySettings } from './types';
 import * as geminiService from './services/geminiService';
 import * as realMarketService from './services/realMarketService';
 import * as storageService from './services/storageService';
@@ -12,17 +12,20 @@ import OutlineStep from './components/steps/OutlineStep';
 import ContentGenerationStep from './components/steps/ContentGenerationStep';
 import IllustrationStep from './components/steps/IllustrationStep';
 import ReviewStep from './components/steps/ReviewStep';
+import SetupWizardStep from './components/steps/SetupWizardStep';
+import ProxySettingsModal from './components/ProxySettingsModal';
 import LoadingSpinner from './components/shared/LoadingSpinner';
 import { SparklesIcon, UserCircleIcon, TrashIcon, RocketLaunchIcon, CheckBadgeIcon } from './components/icons';
+import NullLibraryLogo from './components/NullLibraryLogo';
 import AuthorProfileModal from './components/AuthorProfileModal';
 import BatchMode from './components/BatchMode';
 import KdpAutomationBot from './components/KdpAutomationBot';
 import TitleBar from './components/TitleBar';
 import desktopBridge from './services/desktopBridge';
 
-
 import { useAutoSave } from './hooks/useAutoSave';
 import AutoSaveIndicator from './components/shared/AutoSaveIndicator';
+import { isFirstRun } from './services/oauthSetupService';
 
 const pageRangeToChapterCount = (pageRange: string): number => {
     const firstNum = parseInt(pageRange.split('-')[0], 10);
@@ -35,14 +38,18 @@ const pageRangeToChapterCount = (pageRange: string): number => {
     return 25;
 };
 
-// Versioned storage key
-const STORAGE_KEY = 'kdp-ai-booksmith-v5-db';
+// Versioned storage key (renamed to null-library from kdp-ai-booksmith)
+const STORAGE_KEY = 'null-library-v1-db';
 
 function App() {
   const [mode, setMode] = useState<AppMode>(AppMode.Single);
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.MarketResearch);
   const [isLoading, setIsLoading] = useState(true); // Start true to allow DB load
   const [error, setError] = useState<string | null>(null);
+
+  // ── First-run wizard state ────────────────────────────────────────────────
+  const [showWizard, setShowWizard] = useState(false);
+  const [isProxySettingsOpen, setIsProxySettingsOpen] = useState(false);
   
   // SINGLE BOOK MODE STATE
   const [genreSuggestions, setGenreSuggestions] = useState<GenreSuggestion[] | null>(null);
@@ -75,6 +82,7 @@ function App() {
   // BATCH MODE STATE
   const [batchProjects, setBatchProjects] = useState<BatchProject[]>([]);
   const [isBatchRunning, setIsBatchRunning] = useState(false);
+
 
   // --- AUTO SAVE ---
   const { lastSaved, isSaving: isAutoSaving } = useAutoSave({
@@ -133,18 +141,26 @@ function App() {
             }
         } catch (e) {
             console.error("Failed to load state from DB", e);
-            // Fallback: Check localStorage for migration
-            const legacyState = localStorage.getItem('kdp-ai-booksmith-v4');
-            if (legacyState) {
-                console.log("Migrating from legacy localStorage...");
-                try {
-                    const parsed = JSON.parse(legacyState);
-                    setAuthorProfile(parsed.authorProfile);
-                    // We don't load everything to avoid bugs, just profile is useful
-                } catch(err) {}
+            // Fallback: Check localStorage for migration from legacy storage keys
+            const legacyKeys = ['kdp-ai-booksmith-v4', 'kdp-ai-booksmith-v5-db'];
+            for (const key of legacyKeys) {
+                const legacyState = localStorage.getItem(key);
+                if (legacyState) {
+                    console.log("Migrating from legacy localStorage key:", key);
+                    try {
+                        const parsed = JSON.parse(legacyState);
+                        setAuthorProfile(parsed.authorProfile);
+                    } catch(err) {}
+                    break;
+                }
             }
         } finally {
             setIsLoading(false);
+        }
+        
+        // Show first-run wizard if not completed
+        if (isFirstRun()) {
+            setShowWizard(true);
         }
         
         // Check storage status
@@ -796,7 +812,7 @@ function App() {
         chapterLoadingStates: {} // Don't save loading states
     };
 
-    const fileName = bookOutline?.title ? `${bookOutline.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json` : 'kdp-project.json';
+    const fileName = bookOutline?.title ? `${bookOutline.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json` : 'null-library-project.json';
     
     try {
         const result = await desktopBridge.saveFile(JSON.stringify(projectState, null, 2), fileName);
@@ -940,21 +956,36 @@ function App() {
 
   return (
     <div className="pt-8 min-h-screen flex flex-col bg-slate-900 text-slate-200 font-sans selection:bg-indigo-500 selection:text-white">
-      <TitleBar onSave={handleSaveProject} onLoad={handleLoadProject} />
+      <TitleBar onSave={handleSaveProject} onLoad={handleLoadProject} onOpenSettings={() => setIsProxySettingsOpen(true)} />
       
+      {/* Setup Wizard overlay — shows on first launch */}
+      {showWizard && (
+        <div className="fixed inset-0 z-[200]">
+          <SetupWizardStep
+            onComplete={(_settings: ProxySettings) => setShowWizard(false)}
+            onSkip={() => setShowWizard(false)}
+          />
+        </div>
+      )}
+
+      {/* Proxy Settings Modal */}
+      {isProxySettingsOpen && (
+        <ProxySettingsModal onClose={() => setIsProxySettingsOpen(false)} />
+      )}
+
       {/* Header */}
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-8 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="bg-gradient-to-br from-violet-600 to-indigo-600 p-2 rounded-lg shadow-lg shadow-violet-900/20">
-                <SparklesIcon className="w-6 h-6 text-white" />
+                <NullLibraryLogo size={24} />
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                  KDP E-Book Generator
+                  Null Library
                 </h1>
-                <p className="text-xs text-slate-500 font-medium tracking-wide">AI-POWERED PUBLISHING ENGINE</p>
+                <p className="text-xs text-slate-500 font-medium tracking-wide">THE ART OF INFINITE PRODUCTION</p>
               </div>
             </div>
             
@@ -1062,7 +1093,15 @@ function App() {
                      {isHighPerformanceMode ? "High Concurrency" : "Sequential"}
                  </button>
              </div>
-             <span>App v1.5.0</span>
+             <span>App v3.0.0</span>
+             <button
+               onClick={() => setIsProxySettingsOpen(true)}
+               className="flex items-center gap-1 text-violet-400 hover:text-violet-300 transition-colors hover:underline"
+               title="Open NullProxy Engine settings"
+             >
+               <span>⚡</span>
+               <span>NullProxy</span>
+             </button>
         </div>
       </div>
     </div>

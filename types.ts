@@ -132,6 +132,76 @@ export interface KdpAutomationPayload {
 
 export type BotStatus = 'initializing' | 'running' | 'captcha' | 'uploading' | 'success' | 'error';
 
+// ─── NullProxy Engine Types ───────────────────────────────────────────────────
+
+/**
+ * The AI providers Null Library can connect to via OAuth proxy spoofing.
+ * Each maps to a real AI backend.
+ */
+export type ProxyProvider =
+  | 'gemini-cli'         // Google Gemini via Gemini-CLI OAuth (best for writing & research)
+  | 'gemini-antigravity' // Google Gemini via Antigravity OAuth (backup Gemini channel)
+  | 'claude-kiro'        // Claude via Kiro IDE OAuth (best for critique & marketing copy)
+  | 'openai-codex'       // GPT via GitHub Copilot/Codex OAuth (creative & marketing)
+  | 'openai-qwen'        // Qwen via QwenCoder OAuth (coding tasks, structured output)
+  | 'openai-iflow';      // Qwen Plus via iFlow OAuth (fallback structured tasks)
+
+/**
+ * Types of AI tasks, used for smart routing to the best model.
+ */
+export type TaskType =
+  | 'creative-writing'  // Long-form chapters, narrative content
+  | 'market-research'   // Structured JSON, competitive analysis
+  | 'marketing-copy'    // Book blurbs, KDP descriptions, ad copy
+  | 'image-prompt'      // Illustration prompt generation
+  | 'critique'          // Quality review, proofreading, feedback
+  | 'general';          // Fallback for unclassified tasks
+
+/** A single OAuth-authenticated account for a provider. */
+export interface ProxyAccount {
+  id: string;
+  provider: ProxyProvider;
+  email?: string;
+  displayName?: string;
+  isHealthy: boolean;
+  isDisabled: boolean;
+  lastUsed?: number;
+  tokenExpiry?: number;
+  usageCount: number;
+  errorCount: number;
+}
+
+/** Full proxy engine configuration stored in settings. */
+export interface ProxySettings {
+  /** Master toggle: use proxy at all */
+  enabled: boolean;
+  /** Rotate through multiple accounts per provider */
+  roundRobinEnabled: boolean;
+  /** Provider preference order (first tried first) */
+  providerPriority: ProxyProvider[];
+  /** Which providers to use for each task type */
+  taskRouting: Record<TaskType, ProxyProvider[]>;
+  /** Fall back to free Google account login if all else fails */
+  failsafeEnabled: boolean;
+  /** User-supplied manual API keys (used as fallback) */
+  manualApiKey?: string;
+  manualClaudeApiKey?: string;
+  manualOpenAiApiKey?: string;
+  /** All connected OAuth accounts */
+  accounts: ProxyAccount[];
+}
+
+/** Status reported back to the UI during an OAuth login flow */
+export interface OAuthFlowStatus {
+  provider: ProxyProvider;
+  phase: 'starting' | 'waiting-for-browser' | 'callback-received' | 'saving' | 'done' | 'error';
+  message: string;
+  error?: string;
+}
+
+/** Phase of the first-run setup wizard */
+export type WizardPhase = 'welcome' | 'connect-accounts' | 'api-keys' | 'ready';
+
 export type BotUpdate =
   | { type: 'log'; message: string }
   | { type: 'status'; status: BotStatus }
@@ -156,8 +226,30 @@ export interface ElectronAPI {
 
   // Market Research
   fetchGoogleTrends: (keyword: string) => Promise<GoogleTrendsData | null>;
-  fetchAmazonCompetitors: (keyword: string) => Promise<any[]>; // Using any[] to avoid circular dependency or duplication for now, strictly it's ScrapedBook[]
+  fetchAmazonCompetitors: (keyword: string) => Promise<any[]>;
   fetchAmazonSuggestions: (keyword: string) => Promise<string[]>;
+
+  // ── NullProxy OAuth ──
+  /** Start OAuth login flow for a provider; opens browser */
+  oauthStart: (provider: ProxyProvider) => Promise<{ success: boolean; error?: string }>;
+  /** Cancel an in-progress OAuth flow */
+  oauthCancel: (provider: ProxyProvider) => Promise<void>;
+  /** Subscribe to OAuth flow status updates */
+  onOAuthStatus: (callback: (status: OAuthFlowStatus) => void) => () => void;
+
+  // ── NullProxy Proxy Operations ──
+  /** Get current status/health of all proxy accounts */
+  proxyGetStatus: () => Promise<ProxyAccount[]>;
+  /** Add an additional account to a provider (starts OAuth flow) */
+  proxyAddAccount: (provider: ProxyProvider) => Promise<{ success: boolean; error?: string }>;
+  /** Remove an account by id */
+  proxyRemoveAccount: (accountId: string) => Promise<void>;
+  /** Load saved proxy settings */
+  proxyGetSettings: () => Promise<ProxySettings | null>;
+  /** Save updated proxy settings */
+  proxySaveSettings: (settings: ProxySettings) => Promise<void>;
+  /** Read a credential file path for a provider (for token refresh) */
+  proxyGetCredPath: (provider: ProxyProvider, accountId: string) => Promise<string | null>;
 }
 
 declare global {

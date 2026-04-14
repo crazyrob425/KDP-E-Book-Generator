@@ -18,5 +18,31 @@ import_electron.contextBridge.exposeInMainWorld("electronAPI", {
   },
   fetchGoogleTrends: (keyword) => import_electron.ipcRenderer.invoke("market-research:trends", keyword),
   fetchAmazonCompetitors: (keyword) => import_electron.ipcRenderer.invoke("market-research:competitors", keyword),
-  fetchAmazonSuggestions: (keyword) => import_electron.ipcRenderer.invoke("market-research:suggestions", keyword)
+  fetchAmazonSuggestions: (keyword) => import_electron.ipcRenderer.invoke("market-research:suggestions", keyword),
+  // ── NullProxy OAuth ──
+  oauthStart: (provider) => import_electron.ipcRenderer.invoke("oauth:start", provider),
+  oauthCancel: (provider) => import_electron.ipcRenderer.invoke("oauth:cancel", provider),
+  onOAuthStatus: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    import_electron.ipcRenderer.on("oauth-status", subscription);
+    return () => {
+      import_electron.ipcRenderer.removeListener("oauth-status", subscription);
+    };
+  },
+  // ── NullProxy Proxy Operations ──
+  proxyGetStatus: () => import_electron.ipcRenderer.invoke("proxy:getStatus"),
+  proxyAddAccount: (provider) => import_electron.ipcRenderer.invoke("proxy:addAccount", provider),
+  proxyRemoveAccount: (accountId) => import_electron.ipcRenderer.invoke("proxy:removeAccount", accountId),
+  proxyGetSettings: () => import_electron.ipcRenderer.invoke("proxy:getSettings"),
+  proxySaveSettings: (settings) => import_electron.ipcRenderer.invoke("proxy:saveSettings", settings),
+  proxyGetCredPath: (provider, accountId) => import_electron.ipcRenderer.invoke("proxy:getCredPath", provider, accountId),
+  readCredFile: (filePath) => import_electron.ipcRenderer.invoke("proxy:readCredFile", filePath),
+  // Subscribe to proxy accounts being updated (after an OAuth login)
+  onProxyAccountsUpdated: (callback) => {
+    const subscription = (_event, value) => callback(value);
+    import_electron.ipcRenderer.on("proxy-accounts-updated", subscription);
+    return () => {
+      import_electron.ipcRenderer.removeListener("proxy-accounts-updated", subscription);
+    };
+  }
 });

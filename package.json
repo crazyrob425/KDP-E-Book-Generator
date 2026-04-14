@@ -1,8 +1,8 @@
 {
-  "name": "fraudrobs-ai-book-factory",
+  "name": "null-library",
   "private": true,
-  "version": "2.1.0",
-  "description": "AI-Powered Book Generation Platform - Hardened & Optimized with Local GPT4All LLM",
+  "version": "3.0.0",
+  "description": "Null Library: The Art of Infinite Production",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

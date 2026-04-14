@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { KdpAutomationPayload, BotUpdate } from '../types';
+import { KdpAutomationPayload, BotUpdate, ProxyProvider, ProxyAccount, ProxySettings, OAuthFlowStatus } from '../types';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   minimize: () => ipcRenderer.invoke('window-control', 'minimize'),
@@ -24,4 +24,35 @@ contextBridge.exposeInMainWorld('electronAPI', {
   fetchGoogleTrends: (keyword: string) => ipcRenderer.invoke('market-research:trends', keyword),
   fetchAmazonCompetitors: (keyword: string) => ipcRenderer.invoke('market-research:competitors', keyword),
   fetchAmazonSuggestions: (keyword: string) => ipcRenderer.invoke('market-research:suggestions', keyword),
+
+  // ── NullProxy OAuth ──
+  oauthStart: (provider: ProxyProvider) => ipcRenderer.invoke('oauth:start', provider),
+  oauthCancel: (provider: ProxyProvider) => ipcRenderer.invoke('oauth:cancel', provider),
+  onOAuthStatus: (callback: (status: OAuthFlowStatus) => void) => {
+    const subscription = (_event: any, value: OAuthFlowStatus) => callback(value);
+    ipcRenderer.on('oauth-status', subscription);
+    return () => {
+      ipcRenderer.removeListener('oauth-status', subscription);
+    };
+  },
+
+  // ── NullProxy Proxy Operations ──
+  proxyGetStatus: (): Promise<ProxyAccount[]> => ipcRenderer.invoke('proxy:getStatus'),
+  proxyAddAccount: (provider: ProxyProvider) => ipcRenderer.invoke('proxy:addAccount', provider),
+  proxyRemoveAccount: (accountId: string) => ipcRenderer.invoke('proxy:removeAccount', accountId),
+  proxyGetSettings: (): Promise<ProxySettings | null> => ipcRenderer.invoke('proxy:getSettings'),
+  proxySaveSettings: (settings: ProxySettings) => ipcRenderer.invoke('proxy:saveSettings', settings),
+  proxyGetCredPath: (provider: ProxyProvider, accountId: string) =>
+    ipcRenderer.invoke('proxy:getCredPath', provider, accountId),
+  readCredFile: (filePath: string) => ipcRenderer.invoke('proxy:readCredFile', filePath),
+
+  // Subscribe to proxy accounts being updated (after an OAuth login)
+  onProxyAccountsUpdated: (callback: (accounts: ProxyAccount[]) => void) => {
+    const subscription = (_event: any, value: ProxyAccount[]) => callback(value);
+    ipcRenderer.on('proxy-accounts-updated', subscription);
+    return () => {
+      ipcRenderer.removeListener('proxy-accounts-updated', subscription);
+    };
+  },
 });
+
