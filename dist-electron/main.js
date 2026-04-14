@@ -241,7 +241,9 @@ var createWindow = () => {
     import_electron.shell.openExternal(url);
     return { action: "deny" };
   });
-  mainWindow.webContents.openDevTools();
+  if (!import_electron.app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
   mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
     console.error("Failed to load window:", errorCode, errorDescription);
   });
