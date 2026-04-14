@@ -62,6 +62,10 @@ jobs:
             patchelf
 
       # ── Build ─────────────────────────────────────────────────────────────
+      # Guardrail: print available npm scripts so mismatches are visible in logs
+      - name: List available npm scripts
+        run: npm run
+
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -83,3 +87,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+          npmScriptName: "tauri:build"
