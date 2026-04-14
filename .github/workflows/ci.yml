@@ -10,6 +10,8 @@ jobs:
   build-frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -31,6 +33,8 @@ jobs:
   typecheck-server:
     name: Server TypeScript Check
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 

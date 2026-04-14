@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-// @ts-ignore – @xenova/transformers ships its own types but they aren't always resolved
+// @ts-expect-error – @xenova/transformers ships its own types but they aren't always resolved
 import { pipeline } from '@xenova/transformers';
 import { BookBible, BibleCharacter, BibleLocation, BibleEvent } from '../types';
 import { truncateToTokenBudget } from './tokenOptimizer';
