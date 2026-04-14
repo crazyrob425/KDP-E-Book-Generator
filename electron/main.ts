@@ -44,8 +44,7 @@ const createWindow = () => {
       return { action: 'deny' };
   });
 
-  // Open DevTools only in development
-  if (process.env.VITE_DEV_SERVER_URL) {
+  if (!app.isPackaged) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -85,6 +84,8 @@ ipcMain.handle('start-automation', async (event, payload: KdpAutomationPayload) 
     const sendUpdate = (update: BotUpdate) => {
         sender.send('automation-update', update);
     };
+    const isNonEmptyDataUrl = (value: unknown, prefix: string): value is string =>
+        typeof value === 'string' && value.trim().startsWith(prefix) && value.includes(',');
 
     // BOT-01: Single-run lock — reject if a run is already active
     if (automationGenerator) {
@@ -92,12 +93,19 @@ ipcMain.handle('start-automation', async (event, payload: KdpAutomationPayload) 
         return;
     }
 
+    const hasValidEpubBlob = isNonEmptyDataUrl((payload as any)?.epubBlob, 'data:application/epub+zip;base64,');
+    const hasValidCoverImageUrl = isNonEmptyDataUrl(payload?.coverImageUrl, 'data:image/');
+
     // SEC-01: Validate incoming payload shape
     if (!payload || typeof payload !== 'object' ||
         !payload.outline?.title || !payload.outline?.subtitle ||
         !Array.isArray(payload.outline?.tableOfContents) ||
-        !payload.kdpMarketingInfo || !payload.authorProfile) {
-        sendUpdate({ type: 'error', message: 'Invalid automation payload: missing required fields (outline, kdpMarketingInfo, authorProfile).' });
+        !payload.kdpMarketingInfo || !payload.authorProfile ||
+        !hasValidEpubBlob || !hasValidCoverImageUrl) {
+        sendUpdate({
+            type: 'error',
+            message: 'Invalid automation payload: missing or invalid required fields (outline, kdpMarketingInfo, authorProfile, epubBlob, coverImageUrl).'
+        });
         return;
     }
 
@@ -181,4 +189,3 @@ ipcMain.handle('load-file', async () => {
         return { success: false, error: (e as Error).message };
     }
 });
-

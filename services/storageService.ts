@@ -104,6 +104,18 @@ export const checkStorageQuota = async (): Promise<{ usage: number; quota: numbe
 /** Supported persisted payload versions. */
 export type PersistedVersion = 1 | 2;
 
+const VALID_PAGES_PER_CHAPTER_OPTIONS = new Set([
+  '1-2 pages (short)',
+  '3-5 pages (medium)',
+  '6-10 pages (long)',
+  '11-15 pages (very long)',
+]);
+
+const normalizePagesPerChapter = (value: unknown): string =>
+  typeof value === 'string' && VALID_PAGES_PER_CHAPTER_OPTIONS.has(value)
+    ? value
+    : '3-5 pages (medium)';
+
 /**
  * Migrate a raw persisted blob from an older schema version to the current one.
  * Returns the migrated object (does not persist it – the caller must re-save).
@@ -124,18 +136,29 @@ export const migrateState = (raw: any): any => {
     lastSaved: raw.date ?? raw.lastSaved ?? new Date().toISOString(),
     bookOutline: raw.bookOutline ?? null,
     marketReport: raw.marketReport ?? null,
+    hasViewedReport: raw.hasViewedReport ?? false,
     authorProfile: raw.authorProfile ?? null,
     marketingInfo: raw.kdpMarketingInfo ?? raw.marketingInfo ?? null,
+    genreSuggestions: raw.genreSuggestions ?? null,
+    topicSuggestions: raw.topicSuggestions ?? null,
+    bookGenre: raw.bookGenre ?? 'non-fiction',
+    bookBible: raw.bookBible ?? null,
     covers: raw.covers ?? {
       current: raw.bookCoverUrl ?? null,
       history: raw.covers?.history ?? (raw.bookCoverUrl ? [raw.bookCoverUrl] : []),
     },
     uiState: raw.uiState ?? {
       currentStep: raw.currentStep ?? 0,
-      pagesPerChapter: raw.pagesPerChapter ?? '8-12',
+      pagesPerChapter: normalizePagesPerChapter(raw.pagesPerChapter),
       selectedGenre: raw.selectedGenre ?? null,
     },
   };
+
+  if (migrated.uiState) {
+    migrated.uiState.pagesPerChapter = normalizePagesPerChapter(
+      migrated.uiState.pagesPerChapter ?? raw.pagesPerChapter
+    );
+  }
 
   return migrated;
 };

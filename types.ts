@@ -21,6 +21,52 @@ export interface MarketReport {
   googleTrends?: GoogleTrendsData;
 }
 
+// Book type classification
+export type BookGenre = 'fiction' | 'non-fiction';
+
+// --- Book Bible (character/location/event continuity tracker) ---
+export interface BibleCharacter {
+  name: string;
+  description: string;
+  role: string; // protagonist, antagonist, supporting, etc.
+  firstAppearance: number; // chapter number
+}
+
+export interface BibleLocation {
+  name: string;
+  description: string;
+}
+
+export interface BibleEvent {
+  chapter: number;
+  summary: string;
+}
+
+export interface BookBible {
+  characters: BibleCharacter[];
+  locations: BibleLocation[];
+  keyEvents: BibleEvent[];
+  themes: string[];
+  timeline?: string;
+}
+
+// --- Non-fiction multi-agent research ---
+export interface ResearchSource {
+  title: string;
+  summary: string;
+  relevance: string;
+  sourceType: 'web' | 'academic' | 'news' | 'ai-synthesized';
+}
+
+export interface NonFictionResearchContext {
+  topic: string;
+  sources: ResearchSource[];
+  keyFacts: string[];
+  controversies: string[];
+  expertOpinions: string[];
+  synthesizedOverview: string;
+}
+
 export interface Chapter {
   chapter: number;
   title: string;
@@ -31,12 +77,16 @@ export interface Chapter {
   illustrationStyle?: string;
   isGeneratingPrompt?: boolean;
   isGeneratingImage?: boolean;
+  embeddings?: number[];
 }
 
 export interface BookOutline {
   title: string;
   subtitle: string;
   tableOfContents: Chapter[];
+  bookBible?: BookBible;
+  bookGenre?: BookGenre;
+  researchContext?: NonFictionResearchContext;
 }
 
 export interface CriticReview {

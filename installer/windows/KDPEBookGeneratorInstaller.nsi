@@ -41,6 +41,7 @@ Var StatusLabel
 Var LinkGithub
 Var LinkWebsite
 Var ContactInfoText
+Var ContactOptInCheckbox
 
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_LICENSE "legal\\EULA_MAIN_TOS.txt"
@@ -108,6 +109,7 @@ Section "Uninstall"
 
   DeleteRegKey HKLM "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\${APP_NAME}"
   DeleteRegKey HKLM "${REG_PATH}"
+  DeleteRegValue HKCU "${REG_PATH}" "ContactOptIn"
 SectionEnd
 
 Function ResourceCheckPageCreate
@@ -167,14 +169,17 @@ Function FinalContactPageCreate
   ${NSD_CreateText} 0 96u 100% 12u ""
   Pop $EmailInput
 
-  ${NSD_CreateLabel} 0 122u 100% 30u "Developer Team: Blacklisted Binary Labs$\r$\nLead Developer: Rob Branting (BBLabs Founding Member)"
+  ${NSD_CreateCheckbox} 0 112u 100% 14u "I consent to storing this optional contact info for update/release notifications on this device."
+  Pop $ContactOptInCheckbox
+
+  ${NSD_CreateLabel} 0 132u 100% 30u "Developer Team: Blacklisted Binary Labs$\r$\nLead Developer: Rob Branting (BBLabs Founding Member)"
   Pop $5
 
-  ${NSD_CreateLink} 0 158u 100% 12u "Official GitHub: https://github.com/Blacklisted-Binary"
+  ${NSD_CreateLink} 0 168u 100% 12u "Official GitHub: https://github.com/Blacklisted-Binary"
   Pop $LinkGithub
   ${NSD_OnClick} $LinkGithub OpenGithub
 
-  ${NSD_CreateLink} 0 174u 100% 12u "Official Website: https://www.blacklistedbinary.com"
+  ${NSD_CreateLink} 0 184u 100% 12u "Official Website: https://www.blacklistedbinary.com"
   Pop $LinkWebsite
   ${NSD_OnClick} $LinkWebsite OpenWebsite
 
@@ -184,11 +189,20 @@ FunctionEnd
 Function FinalContactPageLeave
   ${NSD_GetText} $NameInput $UserName
   ${NSD_GetText} $EmailInput $UserEmail
+  ${NSD_GetState} $ContactOptInCheckbox $0
 
-  StrCpy $ContactInfoText "Name=$UserName | Email=$UserEmail"
-  WriteRegStr HKLM "${REG_PATH}" "ContactOptIn" "$ContactInfoText"
-
-  DetailPrint "[Installer] Optional contact captured: $ContactInfoText"
+  StrCpy $ContactInfoText ""
+  ${If} $0 == ${BST_CHECKED}
+    ${If} "$UserName$UserEmail" != ""
+      StrCpy $ContactInfoText "Name=$UserName | Email=$UserEmail"
+      WriteRegStr HKCU "${REG_PATH}" "ContactOptIn" "$ContactInfoText"
+      DetailPrint "[Installer] Optional contact captured: $ContactInfoText"
+    ${Else}
+      DetailPrint "[Installer] Contact opt-in selected, but no contact details provided. Nothing persisted."
+    ${EndIf}
+  ${Else}
+    DetailPrint "[Installer] Contact opt-in not selected. No contact details stored."
+  ${EndIf}
   DetailPrint "[Installer] For update automation, use scripts\\check-latest-release.ps1 to query latest GitHub release metadata."
 FunctionEnd
 

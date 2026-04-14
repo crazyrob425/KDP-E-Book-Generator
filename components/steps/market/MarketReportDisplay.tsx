@@ -45,10 +45,11 @@ const MarketReportDisplay: React.FC<MarketReportDisplayProps> = ({ report, onPro
           </Card>
         </div>
 
-        {/* Google Trends Simulation */}
-        {report.googleTrends && (
+        {/* Google Trends Data */}
+        {report.googleTrends ? (
              <Card className="bg-slate-900/50">
-                <h3 className="text-xl font-semibold text-emerald-400 mb-2">Live Google Trends Insights</h3>
+                <h3 className="text-xl font-semibold text-emerald-400 mb-1">Google Trends Data</h3>
+                <p className="text-xs text-slate-500 mb-3">Powered by Google Trends API — live data from desktop integration.</p>
                 <div className="grid md:grid-cols-2 gap-6">
                     <div>
                         <h4 className="font-semibold text-slate-300">Interest Over Time</h4>
@@ -74,6 +75,13 @@ const MarketReportDisplay: React.FC<MarketReportDisplayProps> = ({ report, onPro
                     </div>
                 </div>
              </Card>
+        ) : (
+            <Card className="bg-slate-900/50 border-slate-700/50">
+                <h3 className="text-xl font-semibold text-emerald-400 mb-1">Google Trends Data</h3>
+                <p className="text-sm text-slate-400 mt-2">
+                    📊 Real-time trends data is unavailable in browser mode. Launch the desktop app for live Google Trends integration via the Electron bridge.
+                </p>
+            </Card>
         )}
 
         {/* Competitor Analysis */}

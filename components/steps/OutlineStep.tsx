@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { MarketReport, BookOutline } from '../../types';
+import { MarketReport, BookOutline, BookGenre } from '../../types';
 import Button from '../shared/Button';
 import Card from '../shared/Card';
 import { SparklesIcon, ArrowPathIcon } from '../icons';
@@ -13,6 +13,8 @@ interface OutlineStepProps {
   setBookOutline: (outline: BookOutline | null) => void;
   onRegenerateTitle: () => void;
   isRegeneratingTitle: boolean;
+  bookGenre: BookGenre;
+  onSetBookGenre: (genre: BookGenre) => void;
 }
 
 const pagesPerChapterOptions = [
@@ -22,7 +24,7 @@ const pagesPerChapterOptions = [
   '11-15 pages (very long)',
 ];
 
-const OutlineStep: React.FC<OutlineStepProps> = ({ marketReport, onOutlineGenerated, isLoading, bookOutline, setBookOutline, onRegenerateTitle, isRegeneratingTitle }) => {
+const OutlineStep: React.FC<OutlineStepProps> = ({ marketReport, onOutlineGenerated, isLoading, bookOutline, setBookOutline, onRegenerateTitle, isRegeneratingTitle, bookGenre, onSetBookGenre }) => {
   const [numChapters, setNumChapters] = useState(10);
   const [pagesPerChapter, setPagesPerChapter] = useState(pagesPerChapterOptions[1]);
   const [isRegeneratingSubtitle, setIsRegeneratingSubtitle] = useState(false);
@@ -158,6 +160,33 @@ const OutlineStep: React.FC<OutlineStepProps> = ({ marketReport, onOutlineGenera
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
             {/* Left side: Inputs */}
             <div className="space-y-6">
+
+              {/* Fiction / Non-Fiction toggle */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Book Type</label>
+                <div className="flex rounded-md overflow-hidden border border-slate-600">
+                  <button
+                    type="button"
+                    onClick={() => onSetBookGenre('non-fiction')}
+                    className={`flex-1 py-2 text-sm font-medium transition-colors ${bookGenre === 'non-fiction' ? 'bg-violet-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                  >
+                    📚 Non-Fiction
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSetBookGenre('fiction')}
+                    className={`flex-1 py-2 text-sm font-medium transition-colors ${bookGenre === 'fiction' ? 'bg-violet-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                  >
+                    ✨ Fiction
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {bookGenre === 'non-fiction'
+                    ? 'Multi-agent research will gather facts, expert knowledge, and sources for your topic.'
+                    : 'Character Bible and Scene Planning will track narrative continuity across chapters.'}
+                </p>
+              </div>
+
               <div>
                 <label htmlFor="numChapters" className="block text-sm font-medium text-slate-300 mb-2">Number of Chapters</label>
                 <div className="flex items-center gap-2">

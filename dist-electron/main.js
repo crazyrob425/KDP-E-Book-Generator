@@ -254,7 +254,7 @@ var createWindow = () => {
     import_electron.shell.openExternal(url);
     return { action: "deny" };
   });
-  if (process.env.VITE_DEV_SERVER_URL) {
+  if (!import_electron.app.isPackaged) {
     mainWindow.webContents.openDevTools();
   }
   mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
@@ -292,12 +292,18 @@ import_electron.ipcMain.handle("start-automation", async (event, payload) => {
   const sendUpdate = (update) => {
     sender.send("automation-update", update);
   };
+  const isNonEmptyDataUrl = (value, prefix) => typeof value === "string" && value.trim().startsWith(prefix) && value.includes(",");
   if (automationGenerator) {
     sendUpdate({ type: "error", message: "An automation run is already in progress. Please stop it before starting a new one." });
     return;
   }
-  if (!payload || typeof payload !== "object" || !payload.outline?.title || !payload.outline?.subtitle || !Array.isArray(payload.outline?.tableOfContents) || !payload.kdpMarketingInfo || !payload.authorProfile) {
-    sendUpdate({ type: "error", message: "Invalid automation payload: missing required fields (outline, kdpMarketingInfo, authorProfile)." });
+  const hasValidEpubBlob = isNonEmptyDataUrl(payload?.epubBlob, "data:application/epub+zip;base64,");
+  const hasValidCoverImageUrl = isNonEmptyDataUrl(payload?.coverImageUrl, "data:image/");
+  if (!payload || typeof payload !== "object" || !payload.outline?.title || !payload.outline?.subtitle || !Array.isArray(payload.outline?.tableOfContents) || !payload.kdpMarketingInfo || !payload.authorProfile || !hasValidEpubBlob || !hasValidCoverImageUrl) {
+    sendUpdate({
+      type: "error",
+      message: "Invalid automation payload: missing or invalid required fields (outline, kdpMarketingInfo, authorProfile, epubBlob, coverImageUrl)."
+    });
     return;
   }
   try {

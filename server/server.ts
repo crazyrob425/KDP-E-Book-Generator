@@ -9,6 +9,8 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 8080;
+const isNonEmptyDataUrl = (value: unknown, prefix: string): value is string =>
+    typeof value === 'string' && value.trim().startsWith(prefix) && value.includes(',');
 
 wss.on('connection', (ws: WebSocket) => {
     console.log('Client connected');
@@ -38,6 +40,8 @@ wss.on('connection', (ws: WebSocket) => {
             } else {
                 // SEC-01: Validate payload shape before starting automation
                 const payload = data as KdpAutomationPayload;
+                const hasValidEpubBlob = isNonEmptyDataUrl((payload as any)?.epubBlob, 'data:application/epub+zip;base64,');
+                const hasValidCoverImageUrl = isNonEmptyDataUrl(payload?.coverImageUrl, 'data:image/');
                 if (
                     !payload ||
                     typeof payload !== 'object' ||
@@ -45,9 +49,11 @@ wss.on('connection', (ws: WebSocket) => {
                     !payload.outline?.subtitle ||
                     !Array.isArray(payload.outline?.tableOfContents) ||
                     !payload.kdpMarketingInfo ||
-                    !payload.authorProfile
+                    !payload.authorProfile ||
+                    !hasValidEpubBlob ||
+                    !hasValidCoverImageUrl
                 ) {
-                    sendUpdate({ type: 'error', message: 'Invalid payload: missing required fields (outline, kdpMarketingInfo, authorProfile).' });
+                    sendUpdate({ type: 'error', message: 'Invalid payload: missing or invalid required fields (outline, kdpMarketingInfo, authorProfile, epubBlob, coverImageUrl).' });
                     return;
                 }
 
