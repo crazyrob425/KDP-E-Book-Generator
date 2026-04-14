@@ -56,17 +56,18 @@ Page custom FinalContactPageCreate FinalContactPageLeave
 !insertmacro MUI_LANGUAGE "English"
 
 Section "Core Application Files" SEC_CORE
+  SetShellVarContext all
   SetOutPath "$INSTDIR"
 
-  ; Replace with real package payload when compile order is given.
-  ; Example (paths are relative to installer/windows at compile time):
-  ; File /r "..\\..\\dist\\*.*"
-  ; File /r "..\\..\\dist-electron\\*.*"
+  ; Ship the compiled desktop app payload.
+  ; Paths are relative to installer/windows at compile time.
+  File "..\\..\\src-tauri\\target\\release\\${MAIN_EXE}"
+  File /r "..\\..\\src-tauri\\target\\release\\deps\\*.*"
 
-  ; Placeholder marker to keep section valid during prep phase.
-  FileOpen $0 "$INSTDIR\\INSTALLER_PREP_NOTE.txt" w
-  FileWrite $0 "Installer scaffold created. Replace Section payload with real app files before compile.\r\n"
-  FileClose $0
+  ; Ship the app icon so shortcuts use the same custom branding even if the
+  ; executable icon is updated later.
+  SetOutPath "$INSTDIR\\installer-support"
+  File "..\\..\\src-tauri\\icons\\icon.ico"
 
   ; Persist install location.
   WriteRegStr HKLM "${REG_PATH}" "InstallDir" "$INSTDIR"
@@ -81,24 +82,27 @@ Section "Core Application Files" SEC_CORE
   WriteUninstaller "$INSTDIR\\Uninstall.exe"
 SectionEnd
 
-Section /o "Create Desktop Shortcut" SEC_DESKTOP
-  CreateShortcut "$DESKTOP\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_EXE}" "" "$INSTDIR\\${MAIN_EXE}" 0
+Section "Create Desktop Shortcut" SEC_DESKTOP
+  SetShellVarContext all
+  CreateShortcut "$DESKTOP\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_EXE}" "" "$INSTDIR\\installer-support\\icon.ico" 0
 SectionEnd
 
-Section /o "Create Start Menu Shortcut" SEC_STARTMENU
+Section "Create Start Menu Shortcut" SEC_STARTMENU
+  SetShellVarContext all
   CreateDirectory "$SMPROGRAMS\\${COMPANY_NAME}"
-  CreateShortcut "$SMPROGRAMS\\${COMPANY_NAME}\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_EXE}" "" "$INSTDIR\\${MAIN_EXE}" 0
+  CreateShortcut "$SMPROGRAMS\\${COMPANY_NAME}\\${APP_NAME}.lnk" "$INSTDIR\\${MAIN_EXE}" "" "$INSTDIR\\installer-support\\icon.ico" 0
   CreateShortcut "$SMPROGRAMS\\${COMPANY_NAME}\\Uninstall ${APP_NAME}.lnk" "$INSTDIR\\Uninstall.exe"
 SectionEnd
 
-Section /o "Install/repair runtime prerequisites (simulation prep)" SEC_PREREQ
+Section "Install/repair runtime prerequisites (simulation prep)" SEC_PREREQ
   SetOutPath "$INSTDIR\\installer-support"
   File "scripts\\preinstall-check-and-bootstrap.ps1"
   nsExec::ExecToLog 'powershell -ExecutionPolicy Bypass -NoProfile -File "$INSTDIR\\installer-support\\preinstall-check-and-bootstrap.ps1" -Silent'
 SectionEnd
 
 Section "Uninstall"
-  Delete "$INSTDIR\\INSTALLER_PREP_NOTE.txt"
+  SetShellVarContext all
+  Delete "$INSTDIR\\installer-support\\icon.ico"
   Delete "$INSTDIR\\Uninstall.exe"
   Delete "$DESKTOP\\${APP_NAME}.lnk"
   Delete "$SMPROGRAMS\\${COMPANY_NAME}\\${APP_NAME}.lnk"

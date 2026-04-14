@@ -6,6 +6,9 @@ This folder contains the prepared scaffold for a custom NSIS-based Windows insta
 
 Prepared:
 - Custom wizard script: `KDPEBookGeneratorInstaller.nsi`
+- Real release payload wiring for `src-tauri/target/release` output
+- All-users desktop/start-menu shortcut creation
+- Shared custom icon path for installed shortcuts
 - Legal/TOS pages:
   - `legal/EULA_MAIN_TOS.txt`
   - `legal/BETA_HOLD_HARMLESS_ADDENDUM.txt`
@@ -29,8 +32,8 @@ Not yet executed by design:
 4. Third-party + AI responsibility notice acceptance
 5. Component selection:
    - Core files
-   - Desktop shortcut (optional)
-   - Start menu shortcut (optional)
+  - Desktop shortcut
+  - Start menu shortcut
    - Runtime prerequisite bootstrap (optional)
 6. Install directory selection (defaults to Program Files)
 7. Simulated resource check page (prep behavior)
@@ -75,4 +78,4 @@ cd installer/windows
 makensis KDPEBookGeneratorInstaller.nsi
 ```
 
-Before compile, replace placeholder file payload in the `Core Application Files` section with real build artifacts.
+Before compile, make sure the Tauri release output exists at `src-tauri/target/release/` so the installer can package the real app payload.
