@@ -176,6 +176,17 @@ If using the standalone backend mode, follow `/server/README.md`.
   npx tsc -p server/tsconfig.json --noEmit
   ```
 
+## 🧩 Windows Installer Prep (NSIS)
+
+- Build NSIS branding assets:
+  ```bash
+  npm run brand:nsis
+  ```
+- Generate release update metadata scaffold:
+  ```bash
+  npm run release:scaffold-update
+  ```
+
 ## 🛠️ Troubleshooting
 
 - **`vite: not found`**

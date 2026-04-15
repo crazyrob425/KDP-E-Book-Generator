@@ -1,0 +1,23 @@
+{
+  "version": "2.1.0",
+  "notes": "Draft update metadata scaffold for v2.1.0.",
+  "pub_date": "2026-04-15T03:21:44.738Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "<replace-with-signature>",
+      "url": "<replace-with-release-asset-url>"
+    },
+    "darwin-aarch64": {
+      "signature": "<replace-with-signature>",
+      "url": "<replace-with-release-asset-url>"
+    },
+    "darwin-x86_64": {
+      "signature": "<replace-with-signature>",
+      "url": "<replace-with-release-asset-url>"
+    },
+    "linux-x86_64": {
+      "signature": "<replace-with-signature>",
+      "url": "<replace-with-release-asset-url>"
+    }
+  }
+}
