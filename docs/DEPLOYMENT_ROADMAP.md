@@ -121,6 +121,15 @@ Installers land in `src-tauri/target/release/bundle/`:
 
 The `.github/workflows/release.yml` workflow builds installers for all platforms and publishes them as a GitHub Release automatically.
 
+### Windows installer prep stack (NSIS)
+
+- `npm run brand:nsis` generates:
+  - `src-tauri/installer-assets/nsis-header.bmp`
+  - `src-tauri/installer-assets/nsis-sidebar.bmp`
+- `src-tauri/installer/nsis-hooks.nsh` enforces a legal confirmation gate before install.
+- `src-tauri/installer/EULA.txt` is bundled as the installer license file.
+- `npm run release:scaffold-update` generates `release/updates/latest.json.template` for updater metadata handoff.
+
 **To cut a release:**
 
 ```bash

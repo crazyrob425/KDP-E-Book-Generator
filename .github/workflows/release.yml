@@ -39,6 +39,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Prepare NSIS branding assets
+        run: npm run brand:nsis
+
+      - name: Generate release update scaffold
+        run: npm run release:scaffold-update
+
       # ── Rust ──────────────────────────────────────────────────────────────
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -71,6 +77,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "KDP E-Book Generator ${{ github.ref_name }}"
