@@ -1,7 +1,14 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { BotUpdate, GoogleTrendsData, KdpAutomationPayload } from '../types';
+import {
+  BotUpdate,
+  DesktopPreferences,
+  GoogleTrendsData,
+  KdpAutomationPayload,
+  NativeMenuAction,
+  SecretDescriptor,
+} from '../types';
 
 type SaveResult = { success: boolean; filePath?: string; error?: string };
 type LoadResult = { success: boolean; data?: string; error?: string };
@@ -22,6 +29,15 @@ export interface DesktopBridge {
   fetchGoogleTrends: (keyword: string) => Promise<GoogleTrendsData | null>;
   fetchAmazonCompetitors: (keyword: string) => Promise<any[]>;
   fetchAmazonSuggestions: (keyword: string) => Promise<string[]>;
+
+  onNativeMenuAction: (callback: (action: NativeMenuAction) => void) => () => void;
+  loadDesktopPreferences: () => Promise<DesktopPreferences>;
+  saveDesktopPreferences: (preferences: DesktopPreferences) => Promise<void>;
+  listSecureDescriptors: () => Promise<SecretDescriptor[]>;
+  setSecureSecret: (descriptor: SecretDescriptor, value: string) => Promise<void>;
+  getSecureSecret: (secretKey: string) => Promise<string | null>;
+  deleteSecureSecret: (secretKey: string) => Promise<void>;
+  startProviderOAuth: (provider: string) => Promise<string>;
 }
 
 const isElectron = () => typeof window !== 'undefined' && !!window.electronAPI;
@@ -47,6 +63,48 @@ const browserBridge: DesktopBridge = {
   fetchGoogleTrends: async () => null,
   fetchAmazonCompetitors: async () => [],
   fetchAmazonSuggestions: async () => [],
+  onNativeMenuAction: () => () => {},
+  loadDesktopPreferences: async () => ({
+    general: {
+      auto_save_frequency_seconds: 30,
+      undo_step_history: 100,
+      saved_books_dir: '',
+      drafts_dir: '',
+      favorite_printer: '',
+    },
+    ai_routing: {
+      mode: 'auto-route',
+      routing_enabled: true,
+      latency_diagnostics_enabled: false,
+      shared_api_key_potluck_enabled: false,
+    },
+    safety: {
+      censorship_enabled: true,
+      ai_personality: 'balanced',
+    },
+    clipboard: {
+      persistent_history_enabled: true,
+      history_limit: 200,
+    },
+    authorship: {
+      standard_book_size: '6x9',
+      default_chapter_count: 10,
+      default_image_style: 'cinematic',
+      description_input_mode: 'few-sentences',
+      auto_publish_marketplace: 'kdp',
+    },
+    cloud_sync: {
+      enabled: false,
+      google_account_email: '',
+      backup_frequency_hours: 24,
+    },
+  }),
+  saveDesktopPreferences: async () => {},
+  listSecureDescriptors: async () => [],
+  setSecureSecret: async () => {},
+  getSecureSecret: async () => null,
+  deleteSecureSecret: async () => {},
+  startProviderOAuth: async () => '',
 };
 
 const electronBridge: DesktopBridge = {
@@ -65,6 +123,14 @@ const electronBridge: DesktopBridge = {
   fetchGoogleTrends: async (keyword) => window.electronAPI?.fetchGoogleTrends?.(keyword) || null,
   fetchAmazonCompetitors: async (keyword) => window.electronAPI?.fetchAmazonCompetitors?.(keyword) || [],
   fetchAmazonSuggestions: async (keyword) => window.electronAPI?.fetchAmazonSuggestions?.(keyword) || [],
+  onNativeMenuAction: () => () => {},
+  loadDesktopPreferences: async () => browserBridge.loadDesktopPreferences(),
+  saveDesktopPreferences: async () => {},
+  listSecureDescriptors: async () => [],
+  setSecureSecret: async () => {},
+  getSecureSecret: async () => null,
+  deleteSecureSecret: async () => {},
+  startProviderOAuth: async () => '',
 };
 
 const tauriBridge: DesktopBridge = {
@@ -139,6 +205,27 @@ const tauriBridge: DesktopBridge = {
       return [];
     }
   },
+  onNativeMenuAction: (callback) => {
+    const unlistenPromise = listen<NativeMenuAction>('native-menu-action', (event) => callback(event.payload));
+    return () => {
+      void unlistenPromise
+        .then((unlisten) => unlisten())
+        .catch((error) => console.warn('Failed to unlisten native menu events:', error));
+    };
+  },
+  loadDesktopPreferences: async () => invoke<DesktopPreferences>('load_desktop_preferences'),
+  saveDesktopPreferences: async (preferences) => {
+    await invoke('save_desktop_preferences', { preferences });
+  },
+  listSecureDescriptors: async () => invoke<SecretDescriptor[]>('list_secure_descriptors'),
+  setSecureSecret: async (descriptor, value) => {
+    await invoke('set_secure_secret', { descriptor, value });
+  },
+  getSecureSecret: async (secretKey) => invoke<string | null>('get_secure_secret', { secretKey }),
+  deleteSecureSecret: async (secretKey) => {
+    await invoke('delete_secure_secret', { secretKey });
+  },
+  startProviderOAuth: async (provider) => invoke<string>('start_provider_oauth', { provider }),
 };
 
 const desktopBridge: DesktopBridge = isElectron() ? electronBridge : isTauri() ? tauriBridge : browserBridge;
