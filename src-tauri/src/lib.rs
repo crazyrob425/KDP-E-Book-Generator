@@ -526,7 +526,12 @@ fn start_provider_oauth(app: tauri::AppHandle, provider: String) -> Result<Strin
         "gemini-cli" => "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
         "antigravity" => "https://auth.antigravity.ai/oauth/authorize".to_string(),
         "claude" => "https://claude.ai/oauth/authorize".to_string(),
-        "kilo" => "https://kilo.example.com/oauth/authorize".to_string(),
+        "kilo" => {
+            return Err(
+                "Kilo OAuth endpoint is not configured yet. Add a valid production URL before enabling."
+                    .to_string(),
+            )
+        }
         _ => return Err("Unsupported OAuth provider".to_string()),
     };
 
