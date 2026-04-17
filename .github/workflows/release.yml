@@ -39,12 +39,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Prepare NSIS branding assets
-        run: npm run brand:nsis
-
-      - name: Generate release update scaffold
-        run: npm run release:scaffold-update
-
       # ── Rust ──────────────────────────────────────────────────────────────
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -95,4 +89,4 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
-          npmScriptName: "tauri:build"
+          npmScriptName: "release:package"
