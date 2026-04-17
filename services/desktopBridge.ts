@@ -37,7 +37,7 @@ export interface DesktopBridge {
   setSecureSecret: (descriptor: SecretDescriptor, value: string) => Promise<void>;
   getSecureSecret: (secretKey: string) => Promise<string | null>;
   deleteSecureSecret: (secretKey: string) => Promise<void>;
-  startProviderOAuth: (provider: string) => Promise<string>;
+  startProviderOAuth: (provider: string, clientId: string, redirectUri: string) => Promise<string>;
 }
 
 const isElectron = () => typeof window !== 'undefined' && !!window.electronAPI;
@@ -104,7 +104,7 @@ const browserBridge: DesktopBridge = {
   setSecureSecret: async () => {},
   getSecureSecret: async () => null,
   deleteSecureSecret: async () => {},
-  startProviderOAuth: async () => '',
+  startProviderOAuth: async (_provider, _clientId, _redirectUri) => '',
 };
 
 const electronBridge: DesktopBridge = {
@@ -130,7 +130,7 @@ const electronBridge: DesktopBridge = {
   setSecureSecret: async () => {},
   getSecureSecret: async () => null,
   deleteSecureSecret: async () => {},
-  startProviderOAuth: async () => '',
+  startProviderOAuth: async (_provider, _clientId, _redirectUri) => '',
 };
 
 const tauriBridge: DesktopBridge = {
@@ -225,7 +225,8 @@ const tauriBridge: DesktopBridge = {
   deleteSecureSecret: async (secretKey) => {
     await invoke('delete_secure_secret', { secretKey });
   },
-  startProviderOAuth: async (provider) => invoke<string>('start_provider_oauth', { provider }),
+  startProviderOAuth: async (provider, clientId, redirectUri) =>
+    invoke<string>('start_provider_oauth', { provider, client_id: clientId, redirect_uri: redirectUri }),
 };
 
 const desktopBridge: DesktopBridge = isElectron() ? electronBridge : isTauri() ? tauriBridge : browserBridge;

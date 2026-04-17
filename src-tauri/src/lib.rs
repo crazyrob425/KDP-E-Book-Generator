@@ -1,10 +1,12 @@
 use keyring::Entry;
+use rand::{distributions::Alphanumeric, rngs::OsRng, Rng};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::{Emitter, Manager};
+use url::Url;
 
 const SECRET_SERVICE: &str = "com.fraudrob.kdpebookgenerator";
 const SETTINGS_FILE: &str = "desktop-menu-settings.json";
@@ -166,6 +168,7 @@ struct MenuActionPayload {
 struct OAuthLaunchPayload {
     provider: String,
     url: String,
+    state: String,
 }
 
 fn config_dir<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<PathBuf, String> {
@@ -267,9 +270,19 @@ fn default_secret_descriptors() -> Vec<SecretDescriptor> {
             category: "oauth".to_string(),
         },
         SecretDescriptor {
+            key: "oauth.gemini_cli.client_id".to_string(),
+            label: "Gemini CLI OAuth Client ID".to_string(),
+            category: "oauth-config".to_string(),
+        },
+        SecretDescriptor {
             key: "oauth.antigravity".to_string(),
             label: "Antigravity OAuth Token".to_string(),
             category: "oauth".to_string(),
+        },
+        SecretDescriptor {
+            key: "oauth.antigravity.client_id".to_string(),
+            label: "Antigravity OAuth Client ID".to_string(),
+            category: "oauth-config".to_string(),
         },
         SecretDescriptor {
             key: "oauth.claude".to_string(),
@@ -277,9 +290,19 @@ fn default_secret_descriptors() -> Vec<SecretDescriptor> {
             category: "oauth".to_string(),
         },
         SecretDescriptor {
+            key: "oauth.claude.client_id".to_string(),
+            label: "Claude OAuth Client ID".to_string(),
+            category: "oauth-config".to_string(),
+        },
+        SecretDescriptor {
             key: "oauth.kilo".to_string(),
             label: "Kilo OAuth Token".to_string(),
             category: "oauth".to_string(),
+        },
+        SecretDescriptor {
+            key: "oauth.kilo.client_id".to_string(),
+            label: "Kilo OAuth Client ID".to_string(),
+            category: "oauth-config".to_string(),
         },
         SecretDescriptor {
             key: "cloud.google.drive".to_string(),
@@ -520,28 +543,57 @@ fn get_menu_blueprint() -> HashMap<String, Vec<String>> {
 }
 
 #[tauri::command]
-fn start_provider_oauth(app: tauri::AppHandle, provider: String) -> Result<String, String> {
+fn start_provider_oauth(
+    app: tauri::AppHandle,
+    provider: String,
+    client_id: String,
+    redirect_uri: String,
+) -> Result<String, String> {
+    if client_id.trim().is_empty() {
+        return Err("OAuth client_id is required.".to_string());
+    }
+    if redirect_uri.trim().is_empty() {
+        return Err("OAuth redirect_uri is required.".to_string());
+    }
+
     let provider_norm = provider.to_lowercase();
-    let auth_url = match provider_norm.as_str() {
-        "gemini-cli" => "https://accounts.google.com/o/oauth2/v2/auth".to_string(),
-        "antigravity" => "https://auth.antigravity.ai/oauth/authorize".to_string(),
-        "claude" => "https://claude.ai/oauth/authorize".to_string(),
+    let auth_base = match provider_norm.as_str() {
+        "gemini-cli" => "https://accounts.google.com/o/oauth2/v2/auth",
+        "antigravity" => "https://auth.antigravity.ai/oauth/authorize",
+        "claude" => "https://claude.ai/oauth/authorize",
         "kilo" => {
             return Err(
                 "Kilo OAuth endpoint is not configured yet. Add a valid production URL before enabling."
                     .to_string(),
             )
         }
-        _ => return Err("Unsupported OAuth provider".to_string()),
+        _ => return Err("Unsupported OAuth provider.".to_string()),
     };
 
+    let state: String = OsRng
+        .sample_iter(&Alphanumeric)
+        .take(48)
+        .map(char::from)
+        .collect();
+
+    let mut auth_url = Url::parse(auth_base).map_err(|e| format!("Invalid OAuth URL: {e}"))?;
+    auth_url
+        .query_pairs_mut()
+        .append_pair("response_type", "code")
+        .append_pair("client_id", client_id.trim())
+        .append_pair("redirect_uri", redirect_uri.trim())
+        .append_pair("scope", "openid profile email")
+        .append_pair("state", &state);
+
+    let auth_url_string = auth_url.to_string();
     let payload = OAuthLaunchPayload {
         provider: provider_norm,
-        url: auth_url.clone(),
+        url: auth_url_string.clone(),
+        state,
     };
     app.emit("oauth-launch-requested", payload)
         .map_err(|e| format!("Could not emit OAuth launch request: {e}"))?;
-    Ok(auth_url)
+    Ok(auth_url_string)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

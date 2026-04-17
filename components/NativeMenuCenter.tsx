@@ -139,7 +139,15 @@ const NativeMenuCenter: React.FC<NativeMenuCenterProps> = ({ panel, onClose }) =
 
   const startOAuth = async (provider: string) => {
     try {
-      const url = await desktopBridge.startProviderOAuth(provider);
+      const providerKey = provider.replace(/-/g, '_');
+      const clientIdSecretKey = `oauth.${providerKey}.client_id`;
+      const clientId = await desktopBridge.getSecureSecret(clientIdSecretKey);
+      if (!clientId) {
+        setStatus(`Missing OAuth client ID. Save "${clientIdSecretKey}" in Account Manager first.`);
+        return;
+      }
+      const redirectUri = 'http://localhost:1420/oauth/callback';
+      const url = await desktopBridge.startProviderOAuth(provider, clientId, redirectUri);
       window.open(url, `${provider}-oauth`, 'width=960,height=720');
       setStatus(`Opened OAuth popup for ${provider}.`);
     } catch (error) {
