@@ -15,6 +15,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    env:
+      MAX_MINOR_CHANGE_LINES: "5"
+      MANUAL_REVIEW_MENTION: "@crazyrob425"
 
     steps:
       - name: Resolve PR context
@@ -50,7 +53,7 @@ jobs:
             core.setOutput("comment_login", comment.user.login);
 
       - name: Checkout PR branch
-        if: steps.pr_context.outputs.skip == 'false'
+        if: steps.pr_context.outputs.skip == 'false' && github.event_name == 'pull_request_review_comment'
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.pr_context.outputs.head_ref }}
@@ -63,6 +66,8 @@ jobs:
           PR_NUMBER: ${{ steps.pr_context.outputs.pr_number }}
           CAN_PUSH: ${{ steps.pr_context.outputs.can_push }}
           COMMENT_LOGIN: ${{ steps.pr_context.outputs.comment_login }}
+          MAX_MINOR_CHANGE_LINES: ${{ env.MAX_MINOR_CHANGE_LINES }}
+          MANUAL_REVIEW_MENTION: ${{ env.MANUAL_REVIEW_MENTION }}
         with:
           script: |
             const fs = require("fs");
@@ -76,6 +81,8 @@ jobs:
             const canPush = process.env.CAN_PUSH === "true";
             const prNumber = Number(process.env.PR_NUMBER);
             const actorLogin = process.env.COMMENT_LOGIN;
+            const MAX_MINOR_CHANGE_LINES = Number(process.env.MAX_MINOR_CHANGE_LINES || "5");
+            const MANUAL_REVIEW_MENTION = process.env.MANUAL_REVIEW_MENTION || "@crazyrob425";
 
             const codeBlockRegex = /```([^\n`]*)\n([\s\S]*?)```/g;
             const codeBlocks = [];
@@ -109,7 +116,9 @@ jobs:
               const start = meta.start ?? reviewStartLine;
               const end = meta.end ?? reviewEndLine ?? start;
               const suggestionPath = meta.path ?? reviewPath;
-              const changedLines = block.content.length === 0 ? 0 : block.content.split("\n").length;
+              const replacementLines = block.content.length === 0 ? 0 : block.content.split("\n").length;
+              const originalSpan = start && end ? Math.abs(end - start) + 1 : 0;
+              const changedLines = Math.max(replacementLines, originalSpan);
               return {
                 info: block.info,
                 path: suggestionPath,
@@ -117,6 +126,7 @@ jobs:
                 end,
                 side: reviewSide,
                 replacement: block.content,
+                replacementLines,
                 changedLines
               };
             }).filter((s) => s.replacement !== undefined);
@@ -158,6 +168,10 @@ jobs:
               reasons.push("No Markdown code blocks were found in the comment.");
               allMinorSafe = false;
             }
+            if (eventName === "issue_comment") {
+              reasons.push("Issue comment suggestions require manual review path for safe execution.");
+              allMinorSafe = false;
+            }
 
             for (const suggestion of suggestions) {
               totalChangedLines += suggestion.changedLines;
@@ -185,14 +199,14 @@ jobs:
                   allMinorSafe = false;
                 }
               }
-              if (suggestion.changedLines > 5) {
-                reasons.push(`Suggestion in ${suggestion.path} changes more than 5 lines.`);
+              if (suggestion.changedLines > MAX_MINOR_CHANGE_LINES) {
+                reasons.push(`Suggestion in ${suggestion.path} changes more than ${MAX_MINOR_CHANGE_LINES} lines.`);
                 allMinorSafe = false;
               }
             }
 
-            if (totalChangedLines > 5) {
-              reasons.push("Total changed lines across suggestions exceeds 5.");
+            if (totalChangedLines > MAX_MINOR_CHANGE_LINES) {
+              reasons.push(`Total changed lines across suggestions exceeds ${MAX_MINOR_CHANGE_LINES}.`);
               allMinorSafe = false;
             }
             if (!canPush) {
@@ -229,7 +243,7 @@ jobs:
                 const minorByNature =
                   normalizedOld === normalizedNew || // formatting/lint only
                   (oldAllComment && newAllComment) || // comment-only
-                  suggestion.changedLines < 5; // tiny non-core patch
+                  suggestion.changedLines < MAX_MINOR_CHANGE_LINES; // tiny non-core patch
 
                 if (!minorByNature) {
                   reasons.push(`Change in ${suggestion.path} is not confidently minor.`);
@@ -242,7 +256,7 @@ jobs:
               }
             }
 
-            const significantMsg = `⚠️ Significant update detected from ${actorLogin}. @crazyrob425, please review this logic manually.`;
+            const significantMsg = `⚠️ Significant update detected from ${actorLogin}. ${MANUAL_REVIEW_MENTION}, please review this logic manually.`;
 
             if (!allMinorSafe) {
               if (eventName === "pull_request_review_comment") {
