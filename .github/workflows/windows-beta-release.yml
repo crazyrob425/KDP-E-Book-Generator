@@ -1,0 +1,63 @@
+name: Release Windows x64 Beta
+
+# Triggers on prerelease-style tags such as: v2.1.1-beta.1
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*-beta*"
+
+jobs:
+  build-windows-beta:
+    name: Build & Release Windows x64 Beta
+    permissions:
+      contents: write
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Node ──────────────────────────────────────────────────────────────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # ── Rust ──────────────────────────────────────────────────────────────
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      # ── Build ─────────────────────────────────────────────────────────────
+      - name: Build and release Windows x64 beta
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "KDP E-Book Generator ${{ github.ref_name }} (Windows x64 Beta)"
+          releaseBody: |
+            ## Windows x64 beta release
+            This prerelease is limited to **Windows x64** and is intended for beta testing.
+
+            ## Included artifacts
+            - **Recommended:** NSIS setup executable (`.exe`)
+
+            ## Notes
+            - Tag format: `vX.Y.Z-beta.N`
+            - GitHub will mark this release as a prerelease.
+            - Stable multi-platform releases continue to use `.github/workflows/release.yml`.
+          releaseDraft: false
+          prerelease: true
+          args: --target x86_64-pc-windows-msvc --bundles nsis
