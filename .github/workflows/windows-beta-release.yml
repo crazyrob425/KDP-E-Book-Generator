@@ -1,0 +1,58 @@
+name: Release Windows x64 Beta
+
+on:
+  push:
+    tags:
+      - "v*.*.*-beta*"
+
+jobs:
+  build-windows-beta:
+    name: Build & Release Windows x64 Beta
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: List available npm scripts
+        run: npm run
+
+      - name: Prepare release packaging assets
+        run: npm run brand:nsis && npm run release:scaffold-update
+
+      - name: Build and release Windows x64 beta
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "KDP E-Book Generator Windows x64 Beta ${{ github.ref_name }}"
+          releaseBody: |
+            ## Windows x64 Beta
+            Automated Windows-only beta build.
+          releaseDraft: false
+          prerelease: true
+          args: --target x86_64-pc-windows-msvc --bundles nsis
