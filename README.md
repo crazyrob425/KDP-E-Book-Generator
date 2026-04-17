@@ -533,11 +533,8 @@ npx playwright install
 ### **Desktop Builds**
 
 ```bash
-# Tauri (Rust-based desktop)
-npm run tauri:build
-
-# Windows Installer Branding
-npm run brand:nsis
+# Distribution-ready desktop package (branding + updater scaffold + installers)
+npm run release:package
 ```
 
 ---

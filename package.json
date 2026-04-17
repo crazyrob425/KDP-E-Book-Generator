@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "brand:nsis": "node scripts/branding/build-nsis-assets.mjs",
     "release:scaffold-update": "node scripts/release/generate-update-scaffold.mjs",
+    "release:package": "npm run brand:nsis && npm run release:scaffold-update && npm run tauri:build",
     "tauri:dev": "concurrently -k \"cd server && npm run start\" \"tauri dev\"",
     "tauri:build": "tauri build"
   },
