@@ -157,12 +157,12 @@ struct SecretIndex {
     descriptors: Vec<SecretDescriptor>,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct MenuActionPayload {
     id: String,
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 struct OAuthLaunchPayload {
     provider: String,
     url: String,
