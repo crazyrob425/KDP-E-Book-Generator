@@ -22,6 +22,7 @@ import AuthorProfileModal from './components/AuthorProfileModal';
 import BatchMode from './components/BatchMode';
 import KdpAutomationBot from './components/KdpAutomationBot';
 import TitleBar from './components/TitleBar';
+import NativeMenuCenter, { NativeMenuPanel } from './components/NativeMenuCenter';
 import desktopBridge from './services/desktopBridge';
 
 
@@ -95,6 +96,7 @@ function App() {
   // NEW: AI Provider config
   const [providerConfig, setProviderConfig] = useState<AIProviderConfig>(() => loadProviderConfig());
   const [isProviderPanelOpen, setIsProviderPanelOpen] = useState(false);
+  const [nativeMenuPanel, setNativeMenuPanel] = useState<NativeMenuPanel>(null);
 
   // --- AUTO SAVE ---
   const { lastSaved, isSaving: isAutoSaving } = useAutoSave({
@@ -252,6 +254,24 @@ function App() {
     setAuthorProfile(profile);
     setIsAuthorModalOpen(false);
   };
+
+  const resetProjectState = useCallback(() => {
+    setMarketReport(null);
+    setHasViewedReport(false);
+    setBookOutline(null);
+    setBookCoverUrl(null);
+    setKdpMarketingInfo(null);
+    setGenreSuggestions(null);
+    setTopicSuggestions(null);
+    setSelectedGenre(null);
+    setCurrentStep(AppStep.MarketResearch);
+    setError(null);
+    setBookBible(null);
+    setResearchContext(null);
+    setAutomationPayload(null);
+    setChapterLoadingStates({});
+    clearVectorStore();
+  }, []);
   
   const handleResetProgress = async () => {
     if (window.confirm("Are you sure you want to reset all progress? This action cannot be undone.")) {
@@ -268,22 +288,7 @@ function App() {
 
   const handleStartNewProject = (startAction: () => void) => {
     const startNew = () => {
-        // Reset all project-specific state
-        setMarketReport(null);
-        setHasViewedReport(false);
-        setBookOutline(null);
-        setBookCoverUrl(null);
-        setKdpMarketingInfo(null);
-        setGenreSuggestions(null);
-        setTopicSuggestions(null);
-        setSelectedGenre(null);
-        setCurrentStep(AppStep.MarketResearch);
-        setError(null);
-        setBookBible(null);
-        setResearchContext(null);
-        // Clear RAG vector store so embeddings don't bleed into new project
-        clearVectorStore();
-        
+        resetProjectState();
         startAction();
     };
 
@@ -960,6 +965,53 @@ function App() {
       }
   };
 
+  useEffect(() => {
+    const unlisten = desktopBridge.onNativeMenuAction(async (action) => {
+      switch (action.id) {
+        case 'file_new':
+          if (window.confirm('Start a new project? Unsaved changes will be lost.')) {
+            resetProjectState();
+          }
+          break;
+        case 'file_open':
+          await handleLoadProject();
+          break;
+        case 'file_save':
+        case 'file_export':
+          await handleSaveProject();
+          break;
+        case 'file_accounts':
+          setNativeMenuPanel('accounts');
+          break;
+        case 'edit_preferences':
+          setNativeMenuPanel('preferences');
+          break;
+        case 'edit_ai_proxy_toggle_routing':
+        case 'edit_ai_proxy_latency':
+        case 'edit_ai_proxy_potluck':
+        case 'edit_ai_proxy_oauth_dashboard':
+          setNativeMenuPanel('ai-proxy');
+          break;
+        case 'edit_clipboard_copy':
+        case 'edit_clipboard_paste':
+        case 'edit_clipboard_find':
+        case 'edit_clipboard_replace':
+        case 'edit_clipboard_persistent_history':
+          setNativeMenuPanel('clipboard');
+          break;
+        case 'authorship_defaults':
+        case 'authorship_marketplace':
+          setNativeMenuPanel('authorship');
+          break;
+        default:
+          break;
+      }
+    });
+    return () => {
+      unlisten();
+    };
+  }, [handleLoadProject, handleSaveProject, resetProjectState]);
+
   if (isLoading) {
       return (
           <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -1150,6 +1202,7 @@ function App() {
             marketReport={marketReport}
         />
       )}
+      <NativeMenuCenter panel={nativeMenuPanel} onClose={() => setNativeMenuPanel(null)} />
 
 
       {/* System Resource Footer Bar */}

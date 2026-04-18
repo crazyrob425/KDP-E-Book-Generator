@@ -28,12 +28,35 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "FraudRob",
+    "homepage": "https://github.com/crazyrob425/KDP-E-Book-Generator",
+    "copyright": "Copyright (c) FraudRob",
+    "licenseFile": "installer/EULA.txt",
+    "createUpdaterArtifacts": "v1Compatible",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "allowDowngrades": false,
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "English"
+        ],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "installer-assets/nsis-header.bmp",
+        "sidebarImage": "installer-assets/nsis-sidebar.bmp",
+        "installerHooks": "installer/nsis-hooks.nsh"
+      }
+    }
   }
 }

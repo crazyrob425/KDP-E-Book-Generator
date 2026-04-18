@@ -1,23 +1,21 @@
 name: Release Windows x64 Beta
 
-# Triggers on prerelease-style tags such as: v2.1.1-beta.1
 on:
   workflow_dispatch:
+  # Triggers on prerelease-style tags such as: v2.1.1-beta.1
   push:
     tags:
       - "v*.*.*-beta*"
-
 jobs:
   build-windows-beta:
     name: Build & Release Windows x64 Beta
+    runs-on: windows-latest
     permissions:
       contents: write
-    runs-on: windows-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # ── Node ──────────────────────────────────────────────────────────────
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -27,7 +25,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # ── Rust ──────────────────────────────────────────────────────────────
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -38,12 +35,19 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      # ── Build ─────────────────────────────────────────────────────────────
+      - name: List available npm scripts
+        run: npm run
+
+      - name: Prepare release packaging assets
+        run: npm run brand:nsis && npm run release:scaffold-update
+
       - name: Build and release Windows x64 beta
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "KDP E-Book Generator ${{ github.ref_name }} (Windows x64 Beta)"

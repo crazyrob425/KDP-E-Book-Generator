@@ -7,6 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "tauri": "tauri",
+    "brand:nsis": "node scripts/branding/build-nsis-assets.mjs",
+    "release:scaffold-update": "node scripts/release/generate-update-scaffold.mjs",
+    "release:package": "npm run brand:nsis && npm run release:scaffold-update && npm run tauri:build",
     "tauri:dev": "concurrently -k \"cd server && npm run start\" \"tauri dev\"",
     "tauri:build": "tauri build",
     "branding:generate": "node scripts/generate-branding-assets.mjs",
@@ -62,8 +66,9 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@tauri-apps/api": "2.9.1",
-    "@tauri-apps/cli": "2.9.6",
+    "@tauri-apps/api": "^2.9.1",
+    "@tauri-apps/cli": "^2.9.6",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "concurrently": "^8.2.2",

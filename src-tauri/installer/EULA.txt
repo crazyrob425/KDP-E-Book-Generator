@@ -1,0 +1,10 @@
+KDP E-Book Generator End User License Agreement (EULA)
+
+By installing or using this software, you agree to the license terms and all applicable laws.
+
+You are responsible for:
+- Complying with Amazon KDP policies and terms.
+- Reviewing generated content before publication.
+- Ensuring credentials and API keys are handled securely.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.

@@ -190,6 +190,64 @@ export type BotUpdate =
   | { type: 'success' }
   | { type: 'error'; message: string };
 
+export interface NativeMenuAction {
+  id: string;
+}
+
+export interface SecretDescriptor {
+  key: string;
+  label: string;
+  category: string;
+}
+
+export interface GeneralPreferences {
+  auto_save_frequency_seconds: number;
+  undo_step_history: number;
+  saved_books_dir: string;
+  drafts_dir: string;
+  favorite_printer: string;
+}
+
+export interface AiRoutingPreferences {
+  mode: 'auto-route' | 'manual-selection';
+  routing_enabled: boolean;
+  latency_diagnostics_enabled: boolean;
+  shared_api_key_potluck_enabled: boolean;
+}
+
+export interface SafetyPreferences {
+  censorship_enabled: boolean;
+  ai_personality: string;
+}
+
+export interface ClipboardPreferences {
+  persistent_history_enabled: boolean;
+  history_limit: number;
+}
+
+export interface AuthorshipPreferences {
+  standard_book_size: string;
+  default_chapter_count: number;
+  default_image_style: string;
+  description_input_mode: 'few-sentences' | 'partial-or-full-manuscript';
+  auto_publish_marketplace: string;
+}
+
+export interface CloudSyncPreferences {
+  enabled: boolean;
+  google_account_email: string;
+  backup_frequency_hours: number;
+}
+
+export interface DesktopPreferences {
+  general: GeneralPreferences;
+  ai_routing: AiRoutingPreferences;
+  safety: SafetyPreferences;
+  clipboard: ClipboardPreferences;
+  authorship: AuthorshipPreferences;
+  cloud_sync: CloudSyncPreferences;
+}
+
 export interface ElectronAPI {
   minimize: () => Promise<void>;
   maximize: () => Promise<void>;

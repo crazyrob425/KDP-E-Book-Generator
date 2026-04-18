@@ -62,11 +62,20 @@ jobs:
             patchelf
 
       # ── Build ─────────────────────────────────────────────────────────────
+      # Guardrail: print available npm scripts so mismatches are visible in logs
+      - name: List available npm scripts
+        run: npm run
+
+      - name: Prepare release packaging assets
+        run: npm run brand:nsis && npm run release:scaffold-update
+
       - name: Build and release Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "KDP E-Book Generator ${{ github.ref_name }}"
@@ -80,6 +89,6 @@ jobs:
             - **macOS (Apple Silicon):** `.dmg` (aarch64)
             - **macOS (Intel):** `.dmg` (x86_64)
             - **Linux:** `.AppImage` or `.deb`
-          releaseDraft: true
-          prerelease: false
+          releaseDraft: ${{ !contains(github.ref_name, '-beta') }}
+          prerelease: ${{ contains(github.ref_name, '-beta') }}
           args: ${{ matrix.args }}
