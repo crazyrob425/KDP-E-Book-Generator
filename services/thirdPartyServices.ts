@@ -25,7 +25,6 @@
 // ── Synchronous CJS imports ───────────────────────────────────────────────────
 import Sentiment from 'sentiment';
 import stringSimilarity from 'string-similarity';
-import readingTime from 'reading-time';
 import Filter from 'bad-words';
 import wordCount from 'word-count';
 import he from 'he';
@@ -234,11 +233,12 @@ export const extractTopThemes = async (text: string, topN = 10): Promise<string[
 // ── 8. Reading time ────────────────────────────────────────────────────────────
 export const estimateReadingTime = (text: string): { minutes: number; text: string; words: number } => {
     const plain = markdownToPlainText(text);
-    const result = readingTime(plain);
+    const words = plain.match(/\b\w+\b/g)?.length ?? 0;
+    const minutes = words === 0 ? 0 : Math.max(1, Math.ceil(words / 200));
     return {
-        minutes: Math.ceil(result.minutes),
-        text: result.text,
-        words: result.words,
+        minutes,
+        text: words === 0 ? '0 min read' : `${minutes} min read`,
+        words,
     };
 };
 
