@@ -1,0 +1,122 @@
+{
+  "workspaceRoot": "e:\\KDP\\KDP-E-Book-Generator",
+  "generatedAt": 1776513579713,
+  "structure": {
+    "totalFiles": 3038,
+    "totalDirs": 530,
+    "languages": {
+      ".md": 9,
+      ".sh": 1,
+      ".json": 486,
+      ".example": 1,
+      ".yml": 3,
+      ".ps1": 7,
+      ".tsx": 28,
+      ".svg": 2,
+      ".png": 18,
+      ".js": 2,
+      ".ts": 20,
+      ".html": 1,
+      ".ico": 3,
+      ".nsi": 2,
+      ".txt": 3,
+      ".mjs": 1,
+      ".rs": 3,
+      ".lock": 1,
+      ".toml": 1,
+      ".icns": 1,
+      ".tag": 2,
+      ".timestamp": 409,
+      ".d": 362,
+      ".dll": 25,
+      ".exp": 25,
+      ".lib": 26,
+      ".pdb": 27,
+      ".rlib": 336,
+      ".rmeta": 335,
+      ".msi": 1,
+      ".exe": 3,
+      ".nsh": 3,
+      ".wxl": 1,
+      ".wixobj": 1,
+      ".wxs": 1,
+      ".wixpdb": 1
+    },
+    "topDirectories": [
+      "assets",
+      "components",
+      "dist-electron",
+      "docs",
+      "electron",
+      "hooks",
+      "installer",
+      "scripts",
+      "server",
+      "services"
+    ]
+  },
+  "summary": "Repository contains 3038 files across 530 directories.\n\nPrimary languages:\n  .json: 486 files\n  .timestamp: 409 files\n  .d: 362 files\n  .rlib: 336 files\n  .rmeta: 335 files\n\nMain directories: assets, components, dist-electron, docs, electron, hooks, installer, scripts, server, services\n\nKey configuration files:\n  .env - Environment variables\n  .env.example - Environment variables\n  .gitignore - Git ignore rules\n  installer/windows/README.md - Project documentation\n  package.json - Node.js project dependencies and scripts\n  README.md - Project documentation\n  server/Dockerfile - Docker container definition\n  server/README.md - Project documentation\n  server/tsconfig.json - TypeScript configuration\n  src-tauri/.gitignore - Git ignore rules",
+  "fileTree": "KDP-E-Book-Generator/\n├── .claude/\n│   ├── CLAUDE.md\n│   ├── hooks/\n│   │   └── vexp-guard.sh\n│   ├── settings.json\n│   └── settings.local.json\n├── .env\n├── .env.example\n├── .flowbaby/\n│   └── logs/\n├── .github/\n│   ├── copilot-instructions.md\n│   └── workflows/\n│       ├── ci.yml\n│       ├── release.yml\n│       └── windows-beta-release.yml\n├── .gitignore\n├── .mcp.json\n├── .specify/\n│   ├── memory/\n│   ├── scripts/\n│   │   └── powershell/\n│   │       ├── check-prerequisites.ps1\n│   │       ├── common.ps1\n│   │       ├── create-new-feature.ps1\n│   │       ├── setup-plan.ps1\n│   │       └── update-copilot-context.ps1\n│   └── specs/\n├── App.tsx\n├── assets/\n│   └── branding/\n│       ├── app-icon.svg\n│       ├── official-logo.png\n│       └── splash-screen.svg\n├── components/\n│   ├── AuthorProfileModal.tsx\n│   ├── batch/\n│   │   ├── BatchProgressStep.tsx\n│   │   └── BatchSetupStep.tsx\n│   ├── BatchMode.tsx\n│   ├── ExpansionHub/\n│   │   ├── AudioProductionPanel.tsx\n│   │   └── ExpansionHub.tsx\n│   ├── icons.tsx\n│   ├── KdpAssistantModal.tsx\n│   ├── KdpAutomationBot.tsx\n│   ├── shared/\n│   │   ├── AutoSaveIndicator.tsx\n│   │   ├── Button.tsx\n│   │   ├── Card.tsx\n│   │   ├── CopyToClipboardButton.tsx\n│   │   ├── LoadingSpinner.tsx\n│   │   ├── Modal.tsx\n│   │   ├── ProviderSettingsPanel.tsx\n│   │   └── StepIndicator.tsx\n│   ├── steps/\n│   │   ├── content/\n│   │   │   └── ProofreadingPane.tsx\n│   │   ├── ContentGenerationStep.tsx\n│   │   ├── IllustrationStep.tsx\n│   │   ├── market/\n│   │   │   └── MarketReportDisplay.tsx\n│   │   ├── MarketResearchStep.tsx\n│   │   ├── OutlineStep.tsx\n│   │   ├── review/\n│   │   │   └── CoverEditor.tsx\n│   │   └── ReviewStep.tsx\n│   └── TitleBar.tsx\n├── dist-electron/\n│   ├── main.js\n│   └── preload.js\n├── docs/\n│   ├── COPILOT_WORKFLOW.md\n│   ├── DEPLOYMENT_ROADMAP.md\n│   ├── IMPLEMENTATION_PLAN.md\n│   └── WINDOWS11_INSTALLER_PREP_PLAN.md\n├── electron/\n│   ├── main.ts\n│   └── preload.ts\n├── hooks/\n│   └── useAutoSave.ts\n├── index.html\n├── index.tsx\n├── installer/\n│   └── windows/\n│       ├── assets/\n│       │   ├── installer-icon-256.png\n│       │   ├── installer-icon.ico\n│       │   ├── installer-splash.png\n│       │   └── wizard-header.png\n│       ├── KDPEBookGeneratorInstaller.nsi\n│       ├── legal/\n│       │   ├── BETA_HOLD_HARMLESS_ADDENDUM.txt\n│       │   ├── EULA_MAIN_TOS.txt\n│       │   └── THIRD_PARTY_AND_AI_USE_NOTICE.txt\n│       ├── README.md\n│       └── scripts/\n│           ├── check-latest-release.ps1\n│           └── preinstall-check-and-bootstrap.ps1\n├── metadata.json\n├── package-lock.json\n├── package.json\n├── README.md\n├── scripts/\n│   └── generate-branding-assets.mjs\n├── server/\n│   ├── automation-worker.ts\n│   ├── Dockerfile\n│   ├── market-research-worker.ts\n│   ├── README.md\n│   ├── server.ts\n│   └── tsconfig.json\n├── services/\n│   ├── aiProvider.ts\n│   ├── audioService.ts\n│   ├── desktopBridge.ts\n│   ├── epubGenerator.ts\n│   ├── geminiService.ts\n│   ├── kdpAutomationService.ts\n│   ├── ragService.ts\n│   ├── realMarketService.ts\n│   ├── storageService.ts\n│   ├── thirdPartyServices.ts\n│   └── tokenOptimizer.ts\n├── src/\n│   └── declarations.d.ts\n├── src-tauri/\n│   ├── .gitignore\n│   ├── build.rs\n│   ├── capabilities/\n│   │   └── default.json\n│   ├── Cargo.lock\n│   ├── Cargo.toml\n│   ├── gen/\n│   │   └── schemas/\n│   │       ├── acl-manifests.json\n│   │       ├── capabilities.json\n│   │       ├── desktop-schema.json\n│   │       └── windows-schema.json\n│   ├── icons/\n│   │   ├── 128x128.png\n│   │   ├── 128x128@2x.png\n│   │   ├── 32x32.png\n│   │   ├── icon.icns\n│   │   ├── icon.ico\n│   │   ├── icon.png\n│   │   ├── Square107x107Logo.png\n│   │   ├── Square142x142Logo.png\n│   │   ├── Square150x150Logo.png\n│   │   ├── Square284x284Logo.png\n│   │   ├── Square30x30Logo.png\n│   │   ├── Square310x310Logo.png\n│   │   ├── Square44x44Logo.png\n│   │   ├── Square71x71Logo.png\n│   │   ├── Square89x89Logo.png\n│   │   └── StoreLogo.png\n│   ├── src/\n│   │   ├── lib.rs\n│   │   └── main.rs\n│   ├── target/\n│   │   ├── .rustc_info.json\n│   │   ├── CACHEDIR.TAG\n│   │   ├── release/\n│   │   │   ├── .cargo-lock\n│   │   │   ├── .fingerprint/\n│   │   │   ├── deps/\n│   │   │   ├── examples/\n│   │   │   └── incremental/\n│   │   └── x86_64-pc-windows-msvc/\n│   │       ├── CACHEDIR.TAG\n│   │       └── release/\n│   └── tauri.conf.json\n├── tsconfig.json\n├── types.ts\n└── vite.config.ts",
+  "keyFiles": [
+    {
+      "path": ".env",
+      "type": "config",
+      "purpose": "Environment variables"
+    },
+    {
+      "path": ".env.example",
+      "type": "config",
+      "purpose": "Environment variables"
+    },
+    {
+      "path": ".gitignore",
+      "type": "config",
+      "purpose": "Git ignore rules"
+    },
+    {
+      "path": "installer/windows/README.md",
+      "type": "doc",
+      "purpose": "Project documentation"
+    },
+    {
+      "path": "package.json",
+      "type": "config",
+      "purpose": "Node.js project dependencies and scripts"
+    },
+    {
+      "path": "README.md",
+      "type": "doc",
+      "purpose": "Project documentation"
+    },
+    {
+      "path": "server/Dockerfile",
+      "type": "config",
+      "purpose": "Docker container definition"
+    },
+    {
+      "path": "server/README.md",
+      "type": "doc",
+      "purpose": "Project documentation"
+    },
+    {
+      "path": "server/tsconfig.json",
+      "type": "config",
+      "purpose": "TypeScript configuration"
+    },
+    {
+      "path": "src-tauri/.gitignore",
+      "type": "config",
+      "purpose": "Git ignore rules"
+    },
+    {
+      "path": "tsconfig.json",
+      "type": "config",
+      "purpose": "TypeScript configuration"
+    },
+    {
+      "path": "vite.config.ts",
+      "type": "config",
+      "purpose": "Vite build configuration"
+    }
+  ]
+}

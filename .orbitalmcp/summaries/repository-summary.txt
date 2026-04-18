@@ -1,0 +1,204 @@
+REPO: KDP-E-Book-Generator
+FILES: 3038 | DIRS: 530
+LANGS: .md:9 .sh:1 .json:486 .example:1 .yml:3 .ps1:7 .tsx:28 .svg:2 .png:18 .js:2 .ts:20 .html:1 .ico:3 .nsi:2 .txt:3 .mjs:1 .rs:3 .lock:1 .toml:1 .icns:1 .tag:2 .timestamp:409 .d:362 .dll:25 .exp:25 .lib:26 .pdb:27 .rlib:336 .rmeta:335 .msi:1 .exe:3 .nsh:3 .wxl:1 .wixobj:1 .wxs:1 .wixpdb:1
+
+Repository contains 3038 files across 530 directories.
+
+Primary languages:
+  .json: 486 files
+  .timestamp: 409 files
+  .d: 362 files
+  .rlib: 336 files
+  .rmeta: 335 files
+
+Main directories: assets, components, dist-electron, docs, electron, hooks, installer, scripts, server, services
+
+Key configuration files:
+  .env - Environment variables
+  .env.example - Environment variables
+  .gitignore - Git ignore rules
+  installer/windows/README.md - Project documentation
+  package.json - Node.js project dependencies and scripts
+  README.md - Project documentation
+  server/Dockerfile - Docker container definition
+  server/README.md - Project documentation
+  server/tsconfig.json - TypeScript configuration
+  src-tauri/.gitignore - Git ignore rules
+
+STRUCTURE:
+KDP-E-Book-Generator/
+├── .claude/
+│   ├── CLAUDE.md
+│   ├── hooks/
+│   │   └── vexp-guard.sh
+│   ├── settings.json
+│   └── settings.local.json
+├── .env
+├── .env.example
+├── .flowbaby/
+│   └── logs/
+├── .github/
+│   ├── copilot-instructions.md
+│   └── workflows/
+│       ├── ci.yml
+│       ├── release.yml
+│       └── windows-beta-release.yml
+├── .gitignore
+├── .mcp.json
+├── .specify/
+│   ├── memory/
+│   ├── scripts/
+│   │   └── powershell/
+│   │       ├── check-prerequisites.ps1
+│   │       ├── common.ps1
+│   │       ├── create-new-feature.ps1
+│   │       ├── setup-plan.ps1
+│   │       └── update-copilot-context.ps1
+│   └── specs/
+├── App.tsx
+├── assets/
+│   └── branding/
+│       ├── app-icon.svg
+│       ├── official-logo.png
+│       └── splash-screen.svg
+├── components/
+│   ├── AuthorProfileModal.tsx
+│   ├── batch/
+│   │   ├── BatchProgressStep.tsx
+│   │   └── BatchSetupStep.tsx
+│   ├── BatchMode.tsx
+│   ├── ExpansionHub/
+│   │   ├── AudioProductionPanel.tsx
+│   │   └── ExpansionHub.tsx
+│   ├── icons.tsx
+│   ├── KdpAssistantModal.tsx
+│   ├── KdpAutomationBot.tsx
+│   ├── shared/
+│   │   ├── AutoSaveIndicator.tsx
+│   │   ├── Button.tsx
+│   │   ├── Card.tsx
+│   │   ├── CopyToClipboardButton.tsx
+│   │   ├── LoadingSpinner.tsx
+│   │   ├── Modal.tsx
+│   │   ├── ProviderSettingsPanel.tsx
+│   │   └── StepIndicator.tsx
+│   ├── steps/
+│   │   ├── content/
+│   │   │   └── ProofreadingPane.tsx
+│   │   ├── ContentGenerationStep.tsx
+│   │   ├── IllustrationStep.tsx
+│   │   ├── market/
+│   │   │   └── MarketReportDisplay.tsx
+│   │   ├── MarketResearchStep.tsx
+│   │   ├── OutlineStep.tsx
+│   │   ├── review/
+│   │   │   └── CoverEditor.tsx
+│   │   └── ReviewStep.tsx
+│   └── TitleBar.tsx
+├── dist-electron/
+│   ├── main.js
+│   └── preload.js
+├── docs/
+│   ├── COPILOT_WORKFLOW.md
+│   ├── DEPLOYMENT_ROADMAP.md
+│   ├── IMPLEMENTATION_PLAN.md
+│   └── WINDOWS11_INSTALLER_PREP_PLAN.md
+├── electron/
+│   ├── main.ts
+│   └── preload.ts
+├── hooks/
+│   └── useAutoSave.ts
+├── index.html
+├── index.tsx
+├── installer/
+│   └── windows/
+│       ├── assets/
+│       │   ├── installer-icon-256.png
+│       │   ├── installer-icon.ico
+│       │   ├── installer-splash.png
+│       │   └── wizard-header.png
+│       ├── KDPEBookGeneratorInstaller.nsi
+│       ├── legal/
+│       │   ├── BETA_HOLD_HARMLESS_ADDENDUM.txt
+│       │   ├── EULA_MAIN_TOS.txt
+│       │   └── THIRD_PARTY_AND_AI_USE_NOTICE.txt
+│       ├── README.md
+│       └── scripts/
+│           ├── check-latest-release.ps1
+│           └── preinstall-check-and-bootstrap.ps1
+├── metadata.json
+├── package-lock.json
+├── package.json
+├── README.md
+├── scripts/
+│   └── generate-branding-assets.mjs
+├── server/
+│   ├── automation-worker.ts
+│   ├── Dockerfile
+│   ├── market-research-worker.ts
+│   ├── README.md
+│   ├── server.ts
+│   └── tsconfig.json
+├── services/
+│   ├── aiProvider.ts
+│   ├── audioService.ts
+│   ├── desktopBridge.ts
+│   ├── epubGenerator.ts
+│   ├── geminiService.ts
+│   ├── kdpAutomationService.ts
+│   ├── ragService.ts
+│   ├── realMarketService.ts
+│   ├── storageService.ts
+│   ├── thirdPartyServices.ts
+│   └── tokenOptimizer.ts
+├── src/
+│   └── declarations.d.ts
+├── src-tauri/
+│   ├── .gitignore
+│   ├── build.rs
+│   ├── capabilities/
+│   │   └── default.json
+│   ├── Cargo.lock
+│   ├── Cargo.toml
+│   ├── gen/
+│   │   └── schemas/
+│   │       ├── acl-manifests.json
+│   │       ├── capabilities.json
+│   │       ├── desktop-schema.json
+│   │       └── windows-schema.json
+│   ├── icons/
+│   │   ├── 128x128.png
+│   │   ├── 128x128@2x.png
+│   │   ├── 32x32.png
+│   │   ├── icon.icns
+│   │   ├── icon.ico
+│   │   ├── icon.png
+│   │   ├── Square107x107Logo.png
+│   │   ├── Square142x142Logo.png
+│   │   ├── Square150x150Logo.png
+│   │   ├── Square284x284Logo.png
+│   │   ├── Square30x30Logo.png
+│   │   ├── Square310x310Logo.png
+│   │   ├── Square44x44Logo.png
+│   │   ├── Square71x71Logo.png
+│   │   ├── Square89x89Logo.png
+│   │   └── StoreLogo.png
+│   ├── src/
+│   │   ├── lib.rs
+│   │   └── main.rs
+│   ├── target/
+│   │   ├── .rustc_info.json
+│   │   ├── CACHEDIR.TAG
+│   │   ├── release/
+│   │   │   ├── .cargo-lock
+│   │   │   ├── .fingerprint/
+│   │   │   ├── deps/
+│   │   │   ├── examples/
+│   │   │   └── incremental/
+│   │   └── x86_64-pc-windows-msvc/
+│   │       ├── CACHEDIR.TAG
+│   │       └── release/
+│   └── tauri.conf.json
+├── tsconfig.json
+├── types.ts
+└── vite.config.ts
