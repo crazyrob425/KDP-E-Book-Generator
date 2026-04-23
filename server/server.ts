@@ -9,6 +9,8 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 8080;
+const isNonEmptyDataUrl = (value: unknown, prefix: string): value is string =>
+    typeof value === 'string' && value.trim().startsWith(prefix) && value.includes(',');
 
 wss.on('connection', (ws: WebSocket) => {
     console.log('Client connected');
@@ -31,10 +33,30 @@ wss.on('connection', (ws: WebSocket) => {
                     if (result.done) {
                         automationGenerator = null; // The generator has finished.
                     }
+                } else {
+                    // BOT-01: Reject new start requests while a run is active
+                    sendUpdate({ type: 'error', message: 'An automation run is already in progress. Send a captcha_solution or wait for completion.' });
                 }
             } else {
-                // This is the first message, which should be the main payload.
-                const payload: KdpAutomationPayload = data;
+                // SEC-01: Validate payload shape before starting automation
+                const payload = data as KdpAutomationPayload;
+                const hasValidEpubBlob = isNonEmptyDataUrl((payload as any)?.epubBlob, 'data:application/epub+zip;base64,');
+                const hasValidCoverImageUrl = isNonEmptyDataUrl(payload?.coverImageUrl, 'data:image/');
+                if (
+                    !payload ||
+                    typeof payload !== 'object' ||
+                    !payload.outline?.title ||
+                    !payload.outline?.subtitle ||
+                    !Array.isArray(payload.outline?.tableOfContents) ||
+                    !payload.kdpMarketingInfo ||
+                    !payload.authorProfile ||
+                    !hasValidEpubBlob ||
+                    !hasValidCoverImageUrl
+                ) {
+                    sendUpdate({ type: 'error', message: 'Invalid payload: missing or invalid required fields (outline, kdpMarketingInfo, authorProfile, epubBlob, coverImageUrl).' });
+                    return;
+                }
+
                 console.log('Received automation payload for:', payload.outline.title);
 
                 automationGenerator = runAutomation(payload, sendUpdate);

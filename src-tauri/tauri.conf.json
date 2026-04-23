@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "KDP E-Book Generator",
   "version": "2.1.0",
-  "identifier": "com.fraudrob.kdpebookgenerator",
+  "identifier": "com.blacklistedbinary.kdpebookgenerator",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",

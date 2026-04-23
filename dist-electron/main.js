@@ -210,6 +210,19 @@ async function fetchAmazonCompetitors(keyword) {
     if (browser) await browser.close();
   }
 }
+async function fetchAmazonSuggestions(keyword) {
+  try {
+    const response = await fetch(`https://completion.amazon.com/api/2017/suggestions?session-id=123-4567890-123456&customer-id=&request-id=12345&page-type=Search&lop=en_US&site-variant=desktop&client-info=amazon-search-ui&mid=ATVPDKIKX0DER&alias=aps&b2b=0&fresh=0&ks=65&prefix=${encodeURIComponent(keyword)}&event=onKeyPress&limit=11&fb=1&suggestion-type=KEYWORD`);
+    const data = await response.json();
+    if (data.suggestions) {
+      return data.suggestions.map((s) => s.value);
+    }
+    return [];
+  } catch (e) {
+    console.error("Amazon Suggestions Error:", e);
+    return [];
+  }
+}
 
 // electron/main.ts
 try {
@@ -279,9 +292,21 @@ import_electron.ipcMain.handle("start-automation", async (event, payload) => {
   const sendUpdate = (update) => {
     sender.send("automation-update", update);
   };
+  const isNonEmptyDataUrl = (value, prefix) => typeof value === "string" && value.trim().startsWith(prefix) && value.includes(",");
+  if (automationGenerator) {
+    sendUpdate({ type: "error", message: "An automation run is already in progress. Please stop it before starting a new one." });
+    return;
+  }
+  const hasValidEpubBlob = isNonEmptyDataUrl(payload?.epubBlob, "data:application/epub+zip;base64,");
+  const hasValidCoverImageUrl = isNonEmptyDataUrl(payload?.coverImageUrl, "data:image/");
+  if (!payload || typeof payload !== "object" || !payload.outline?.title || !payload.outline?.subtitle || !Array.isArray(payload.outline?.tableOfContents) || !payload.kdpMarketingInfo || !payload.authorProfile || !hasValidEpubBlob || !hasValidCoverImageUrl) {
+    sendUpdate({
+      type: "error",
+      message: "Invalid automation payload: missing or invalid required fields (outline, kdpMarketingInfo, authorProfile, epubBlob, coverImageUrl)."
+    });
+    return;
+  }
   try {
-    if (automationGenerator) {
-    }
     automationGenerator = runAutomation(payload, sendUpdate);
     const result = await automationGenerator.next();
     if (result.done) {
@@ -290,6 +315,7 @@ import_electron.ipcMain.handle("start-automation", async (event, payload) => {
   } catch (e) {
     console.error("Automation error:", e);
     sendUpdate({ type: "error", message: e.message });
+    automationGenerator = null;
   }
 });
 import_electron.ipcMain.handle("captcha-solution", async (event, solution) => {
@@ -311,6 +337,9 @@ import_electron.ipcMain.handle("market-research:trends", async (_, keyword) => {
 });
 import_electron.ipcMain.handle("market-research:competitors", async (_, keyword) => {
   return await fetchAmazonCompetitors(keyword);
+});
+import_electron.ipcMain.handle("market-research:suggestions", async (_, keyword) => {
+  return await fetchAmazonSuggestions(keyword);
 });
 import_electron.ipcMain.handle("save-file", async (event, data, filename) => {
   const { canceled, filePath } = await import_electron.dialog.showSaveDialog({

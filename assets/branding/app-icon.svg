@@ -1,0 +1,19 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="KDP E-Book Generator Icon">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4C1D95"/>
+      <stop offset="50%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#065F46"/>
+    </linearGradient>
+    <linearGradient id="book" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#A78BFA"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="960" height="960" rx="220" fill="url(#bg)"/>
+  <rect x="220" y="228" width="584" height="568" rx="56" fill="#0B1220" stroke="#C4B5FD" stroke-width="24"/>
+  <path d="M290 340h210c82 0 150 68 150 150v184h-28V500c0-70-52-122-122-122H290v-38z" fill="url(#book)"/>
+  <path d="M734 340H524c-82 0-150 68-150 150v184h28V500c0-70 52-122 122-122h210v-38z" fill="url(#book)"/>
+  <path d="M512 260l18 42 46 4-35 29 11 45-40-24-40 24 11-45-35-29 46-4z" fill="#F59E0B"/>
+  <text x="512" y="760" text-anchor="middle" fill="#E2E8F0" font-family="Segoe UI, Arial, sans-serif" font-size="74" font-weight="700">KDP AI</text>
+</svg>

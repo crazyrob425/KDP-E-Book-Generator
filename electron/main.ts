@@ -44,9 +44,8 @@ const createWindow = () => {
       return { action: 'deny' };
   });
 
-  // DEBUG: Open DevTools to debug blank screen (only when not packaged)
   if (!app.isPackaged) {
-      mainWindow!.webContents.openDevTools();
+    mainWindow.webContents.openDevTools();
   }
 
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -85,15 +84,32 @@ ipcMain.handle('start-automation', async (event, payload: KdpAutomationPayload) 
     const sendUpdate = (update: BotUpdate) => {
         sender.send('automation-update', update);
     };
+    const isNonEmptyDataUrl = (value: unknown, prefix: string): value is string =>
+        typeof value === 'string' && value.trim().startsWith(prefix) && value.includes(',');
+
+    // BOT-01: Single-run lock — reject if a run is already active
+    if (automationGenerator) {
+        sendUpdate({ type: 'error', message: 'An automation run is already in progress. Please stop it before starting a new one.' });
+        return;
+    }
+
+    const hasValidEpubBlob = isNonEmptyDataUrl((payload as any)?.epubBlob, 'data:application/epub+zip;base64,');
+    const hasValidCoverImageUrl = isNonEmptyDataUrl(payload?.coverImageUrl, 'data:image/');
+
+    // SEC-01: Validate incoming payload shape
+    if (!payload || typeof payload !== 'object' ||
+        !payload.outline?.title || !payload.outline?.subtitle ||
+        !Array.isArray(payload.outline?.tableOfContents) ||
+        !payload.kdpMarketingInfo || !payload.authorProfile ||
+        !hasValidEpubBlob || !hasValidCoverImageUrl) {
+        sendUpdate({
+            type: 'error',
+            message: 'Invalid automation payload: missing or invalid required fields (outline, kdpMarketingInfo, authorProfile, epubBlob, coverImageUrl).'
+        });
+        return;
+    }
 
     try {
-        if (automationGenerator) {
-            // If running, ensure we clean up? Or maybe we just restart.
-            // For now, let's just error if busy? Or kill previous?
-            // Simple approach: Error if busy
-             // But actually, the generator might be waiting for input.
-        }
-
         automationGenerator = runAutomation(payload, sendUpdate);
         const result = await automationGenerator.next();
         if (result.done) {
@@ -102,6 +118,7 @@ ipcMain.handle('start-automation', async (event, payload: KdpAutomationPayload) 
     } catch (e) {
         console.error('Automation error:', e);
         sendUpdate({ type: 'error', message: (e as Error).message });
+        automationGenerator = null;
     }
 });
 
@@ -129,6 +146,10 @@ ipcMain.handle('market-research:trends', async (_, keyword: string) => {
 
 ipcMain.handle('market-research:competitors', async (_, keyword: string) => {
     return await fetchAmazonCompetitors(keyword);
+});
+
+ipcMain.handle('market-research:suggestions', async (_, keyword: string) => {
+    return await fetchAmazonSuggestions(keyword);
 });
 
 // --- FILE SYSTEM HANDLERS ---
@@ -168,4 +189,3 @@ ipcMain.handle('load-file', async () => {
         return { success: false, error: (e as Error).message };
     }
 });
-

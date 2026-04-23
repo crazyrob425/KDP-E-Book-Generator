@@ -1,10 +1,11 @@
 name: Release Windows x64 Beta
 
 on:
+  workflow_dispatch:
+  # Triggers on prerelease-style tags such as: v2.1.1-beta.1
   push:
     tags:
       - "v*.*.*-beta*"
-
 jobs:
   build-windows-beta:
     name: Build & Release Windows x64 Beta
@@ -49,10 +50,18 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: "KDP E-Book Generator Windows x64 Beta ${{ github.ref_name }}"
+          releaseName: "KDP E-Book Generator ${{ github.ref_name }} (Windows x64 Beta)"
           releaseBody: |
-            ## Windows x64 Beta
-            Automated Windows-only beta build.
+            ## Windows x64 beta release
+            This prerelease is limited to **Windows x64** and is intended for beta testing.
+
+            ## Included artifacts
+            - **Recommended:** NSIS setup executable (`.exe`)
+
+            ## Notes
+            - Tag format: `vX.Y.Z-beta.N`
+            - GitHub will mark this release as a prerelease.
+            - Stable multi-platform releases continue to use `.github/workflows/release.yml`.
           releaseDraft: false
           prerelease: true
           args: --target x86_64-pc-windows-msvc --bundles nsis

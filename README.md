@@ -608,6 +608,92 @@ All contributions are **greatly appreciated**. Even the ones that are just fixin
 
 **Slogan:** *Null Library: The Art of Infinite Production*
 
+### 1) Web UI mode
+- Run: `npm run dev`
+- Supports the core authoring workflow (research, outline, generation, review).
+- Electron-specific features (custom window controls, IPC-backed file dialogs, local automation worker bridge) are not guaranteed in plain browser mode.
+
+### 2) Electron desktop mode (primary automation path)
+- Frontend + Electron preload/main process integration.
+- KDP automation component currently uses Electron IPC as the active transport path.
+- Uses handlers defined in `electron/main.ts` and API exposed in `electron/preload.ts`.
+
+### 3) Standalone backend automation mode (optional)
+- `server/server.ts` provides a WebSocket backend path for automation workflows.
+- Treat this as an optional deployment mode for remote automation hosting scenarios.
+- See `server/README.md` for backend setup and deployment details.
+
+### 🤖 Automation Bot Setup (Optional)
+
+To run browser automation reliably:
+
+1. Install dependencies in the root project (`npm install`).
+2. Install Playwright browsers:
+   ```bash
+   npx playwright install
+   ```
+3. Set:
+   - `KDP_EMAIL`
+   - `KDP_PASSWORD`
+
+If using the standalone backend mode, follow `/server/README.md`.
+
+## ✅ Validation Commands
+
+- Frontend build:
+  ```bash
+  npm run build
+  ```
+- Server TypeScript check:
+  ```bash
+  npx tsc -p server/tsconfig.json --noEmit
+  ```
+
+## 🧩 Windows 11 Installer Wizard Prep (No Compile Yet)
+
+This repository now includes a prepared custom installer scaffold under:
+
+- `installer/windows/KDPEBookGeneratorInstaller.nsi`
+- `installer/windows/legal/*`
+- `installer/windows/scripts/*`
+
+Support scripts:
+
+```bash
+npm run branding:generate
+npm run installer:prep
+```
+
+Before installer compile, place the official user-provided logo at:
+
+- `assets/branding/logo_source.png`
+
+Then regenerate icon/splash assets:
+
+```bash
+npm run branding:generate
+```
+
+Compilation is intentionally deferred until explicit approval.
+
+## 🛠️ Troubleshooting
+
+- **`vite: not found`**
+  - Run `npm install` first, then rerun `npm run build` or `npm run dev`.
+
+- **Missing API key errors**
+  - Ensure `.env` contains `VITE_GOOGLE_API_KEY`.
+
+- **Playwright launch/automation failures**
+  - Run `npx playwright install`.
+  - Ensure `KDP_EMAIL` and `KDP_PASSWORD` are present in environment.
+
+- **IPC-only feature errors in browser mode**
+  - Features relying on `window.electronAPI` require Electron desktop runtime.
+
+- **Backend connectivity mismatch**
+  - Electron automation flow uses IPC.
+  - Standalone backend flow requires a running WebSocket backend on the expected URL/path.
 **Philosophy:** If you can't be the best writer in the room, build a room full of robots that are.
 
 ---

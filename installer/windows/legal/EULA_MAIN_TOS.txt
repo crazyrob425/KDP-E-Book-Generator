@@ -1,0 +1,72 @@
+KDP E-BOOK GENERATOR
+END USER LICENSE AGREEMENT (EULA) AND TERMS OF SERVICE
+
+Effective Date: 2026-04-07
+
+IMPORTANT: READ THIS AGREEMENT CAREFULLY BEFORE INSTALLING OR USING THIS SOFTWARE.
+BY CLICKING "I AGREE," INSTALLING, COPYING, OR USING THE SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ, UNDERSTOOD, AND AGREE TO BE BOUND BY THIS AGREEMENT.
+IF YOU DO NOT AGREE, CLICK "DECLINE" AND DO NOT INSTALL OR USE THE SOFTWARE.
+
+1. PARTIES
+This EULA is a legal agreement between you (an individual or legal entity) and the software publisher/development team for KDP E-Book Generator (the "Software").
+
+2. LICENSE GRANT
+Subject to your compliance with this Agreement, you are granted a limited, non-exclusive, non-transferable, revocable license to install and use the Software for lawful business and personal publishing workflows.
+
+3. BETA / PRE-RELEASE NATURE
+The Software may include beta, preview, or pre-release features. Such features may be incomplete, unstable, contain defects, and may change or be removed without notice.
+
+4. ACCEPTABLE USE
+You agree to use the Software only for lawful purposes and in compliance with all applicable laws, regulations, marketplace rules, and third-party terms.
+You may not use the Software to infringe copyright, commit fraud, violate platform rules, or engage in deceptive publishing practices.
+
+5. THIRD-PARTY SERVICE COMPLIANCE (USER RESPONSIBILITY)
+You are solely responsible for understanding, monitoring, and complying with current third-party terms of service and policy updates, including but not limited to:
+- Amazon KDP terms, content guidelines, account rules, and automation restrictions;
+- Any online marketplace, payment platform, AI API provider, or hosting provider used with the Software.
+The development team does not guarantee your account standing with any third party.
+
+6. AI-GENERATED CONTENT DISCLAIMER
+The Software uses AI systems that may produce inaccurate, incomplete, biased, offensive, non-compliant, or otherwise defective output.
+YOU MUST independently review, fact-check, edit, and validate all generated content, metadata, and media before publishing, sharing, or relying on it.
+You accept all consequences of using unverified AI output.
+
+7. NO LEGAL, COMPLIANCE, OR BUSINESS GUARANTEE
+The Software and any generated output are provided for productivity assistance only.
+Nothing in the Software constitutes legal advice, compliance certification, or a guarantee of publication outcomes, sales outcomes, policy compliance, or account safety.
+
+8. HOLD HARMLESS / LIMITATION OF LIABILITY
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE," WITHOUT WARRANTIES OF ANY KIND.
+THE DEVELOPMENT TEAM, CONTRIBUTORS, AFFILIATES, AND DISTRIBUTORS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
+- Lost profits, lost revenue, lost business opportunities;
+- Account warnings, suspensions, restrictions, removals, or terminations;
+- Marketplace takedowns or listing suppression;
+- Data loss, data corruption, or reputational harm;
+- Regulatory or contractual disputes arising from your use.
+Your exclusive remedy is to stop using the Software.
+
+9. INDEMNIFICATION
+You agree to defend, indemnify, and hold harmless the development team and contributors from and against claims, damages, liabilities, losses, and expenses (including reasonable attorneys' fees) arising from:
+- Your use or misuse of the Software;
+- Your content or publishing activities;
+- Your violation of this Agreement or third-party terms.
+
+10. DATA, CREDENTIALS, AND SECURITY
+You are responsible for secure handling of your own credentials, API keys, and account access.
+The development team is not responsible for losses resulting from compromised local systems, leaked credentials, or insecure operational practices by end users.
+
+11. TERMINATION
+This license terminates automatically if you breach this Agreement.
+Upon termination, you must stop using the Software and remove installed copies where required by law or contract.
+
+12. UPDATES
+The Software may include update-check logic and may provide links to official releases.
+You remain responsible for verifying release authenticity and compatibility before installation.
+
+13. GOVERNING LAW
+This Agreement shall be governed by applicable law in the relevant jurisdiction unless otherwise required by local mandatory consumer protections.
+
+14. ENTIRE AGREEMENT
+This Agreement, together with included addenda presented during install, constitutes the entire agreement regarding use of the Software.
+
+BY ACCEPTING, YOU CONFIRM THAT YOU HAVE READ THIS AGREEMENT IN FULL AND AGREE TO BE BOUND BY IT.
