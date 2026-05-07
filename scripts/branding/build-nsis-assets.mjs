@@ -18,7 +18,7 @@ try {
   source = preferredSource;
 } catch (error) {
   source = fallbackSource;
-  if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+  if (error?.code && error.code !== 'ENOENT') {
     throw error;
   }
   console.warn(`Preferred installer splash image not found at: ${preferredSource}. Falling back to ${fallbackSource}.`);
