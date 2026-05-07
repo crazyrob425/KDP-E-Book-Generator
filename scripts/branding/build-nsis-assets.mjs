@@ -5,7 +5,7 @@ import sharp from 'sharp';
 const root = process.cwd();
 const preferredSource = path.join(root, 'null library.png');
 const fallbackSource = path.join(root, 'src-tauri', 'icons', 'icon.png');
-let source = fallbackSource;
+let source;
 const outDir = path.join(root, 'src-tauri', 'installer-assets');
 const sidebarImage = path.join(outDir, 'nsis-sidebar.bmp');
 const headerImage = path.join(outDir, 'nsis-header.bmp');
