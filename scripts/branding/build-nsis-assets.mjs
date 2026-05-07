@@ -3,13 +3,26 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 const root = process.cwd();
-const source = path.join(root, 'src-tauri', 'icons', 'icon.png');
+const preferredSource = path.join(root, 'null library.png');
+const fallbackSource = path.join(root, 'src-tauri', 'icons', 'icon.png');
+let source;
 const outDir = path.join(root, 'src-tauri', 'installer-assets');
 const sidebarImage = path.join(outDir, 'nsis-sidebar.bmp');
 const headerImage = path.join(outDir, 'nsis-header.bmp');
 const installerIcon = path.join(root, 'src-tauri', 'icons', 'icon.ico');
 
 await fs.mkdir(outDir, { recursive: true });
+
+try {
+  await fs.access(preferredSource);
+  source = preferredSource;
+} catch (error) {
+  source = fallbackSource;
+  if (error?.code && error.code !== 'ENOENT') {
+    throw error;
+  }
+  console.warn(`Preferred installer splash image not found at: ${preferredSource}. Falling back to ${fallbackSource}.`);
+}
 
 const toBmp24 = async (inputPath, width, height, outputPath) => {
   const { data, info } = await sharp(inputPath)
@@ -63,6 +76,7 @@ await toBmp24(source, 164, 314, sidebarImage);
 await toBmp24(source, 150, 57, headerImage);
 
 console.log('NSIS branding assets prepared:');
+console.log(`- source image: ${source}`);
 console.log(`- ${headerImage}`);
 console.log(`- ${sidebarImage}`);
 console.log(`- ${installerIcon}`);

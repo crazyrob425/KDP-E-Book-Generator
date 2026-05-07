@@ -1,4 +1,13 @@
 declare module 'google-trends-api' {
-  const googleTrends: any;
+  interface GoogleTrendsQuery {
+    keyword: string;
+  }
+
+  interface GoogleTrendsApi {
+    interestOverTime(options: GoogleTrendsQuery): Promise<string>;
+    relatedQueries(options: GoogleTrendsQuery): Promise<string>;
+  }
+
+  const googleTrends: GoogleTrendsApi;
   export default googleTrends;
 }
