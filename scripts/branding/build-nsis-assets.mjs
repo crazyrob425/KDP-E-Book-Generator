@@ -16,8 +16,12 @@ await fs.mkdir(outDir, { recursive: true });
 try {
   await fs.access(preferredSource);
   source = preferredSource;
-} catch {
+} catch (error) {
   source = fallbackSource;
+  if (error && typeof error === 'object' && 'code' in error && error.code !== 'ENOENT') {
+    throw error;
+  }
+  console.warn(`Preferred installer splash image not found at: ${preferredSource}. Falling back to ${fallbackSource}.`);
 }
 
 const toBmp24 = async (inputPath, width, height, outputPath) => {
